@@ -325,14 +325,14 @@ extracted_stock_df
 
 
 
-### 休日の探索期間
+### 祝日の探索期間
 
-休日はデフォルトでは2015年から2021年のものを利用できる．オプションから変更できる
+祝日はデフォルトでは2015年から2021年のものを利用できる．オプションから変更できる
 
 
 ```python
 # default
-option.holidays_date_array[:5]  # 利用される休日
+option.holidays_date_array[:5]  # 利用される祝日
 ```
 
 
@@ -347,7 +347,7 @@ option.holidays_date_array[:5]  # 利用される休日
 
 ```python
 option.holiday_start_year = 2000
-option.holidays_date_array[:5]  # 利用される休日
+option.holidays_date_array[:5]  # 利用される祝日
 ```
 
 
