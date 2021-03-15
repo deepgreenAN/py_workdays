@@ -57,8 +57,8 @@ class Option():
     オプションの指定のためのクラス
     """
     def __init__(self):
-        self._holiday_start_year = 2015
-        self._holiday_end_year = 2021
+        self._holiday_start_year = datetime.datetime.now().year-5
+        self._holiday_end_year = datetime.datetime.now().year
         
         # 利用する休日のarray
         self._holidays_date_array =  get_holiday_jp(start_date=datetime.date(self._holiday_start_year,1,1),
