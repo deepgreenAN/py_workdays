@@ -17,14 +17,19 @@ import pickle
 from py_workdays import get_workdays_jp, check_workday_jp, extract_workdays_jp, extract_workdays_intraday_jp, option
 ```
 
-### 営業日を取得
+## 営業日を取得
 
 
 ```python
 start_date = datetime.date(2020,11,1)
 end_date = datetime.date(2021,1,1)
 
-get_workdays_jp(start_date, end_date, return_as="date")
+workdays = get_workdays_jp(start_date, end_date, return_as="date")
+```
+
+
+```python
+workdays
 ```
 
 
@@ -55,7 +60,7 @@ get_workdays_jp(start_date, end_date, return_as="date")
 
 
 
-### 営業日かどうか判定 
+## 営業日かどうか判定 
 
 
 ```python
@@ -71,7 +76,9 @@ check_workday_jp(select_date)
 
 
 
-### 既存のデータフレームから営業日・営業時間(東京証券取引所)のものを取得 
+## 既存のデータフレームから営業日・営業時間のものを取得 
+
+デフォルトでは，東京証券取引所の営業日(土日・祝日，振替休日を除く)・営業時間(9時～11時30分，12時30分～15時)として利用できる．
 
 
 ```python
@@ -85,6 +92,19 @@ aware_stock_df
 
 
 <div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -210,6 +230,19 @@ extracted_stock_df
 
 
 <div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -325,36 +358,263 @@ extracted_stock_df
 
 
 
-### 祝日の探索期間
+## Option 
 
-祝日はデフォルトでは現在年から5年前のものを利用できる．オプションから変更できる
+### 祝日・休日の探索期間
+
+祝日・休日はデフォルトでは現在年の5年前から利用できる．開始・終了年はオプションから変更できる
 
 
 ```python
 # default
-option.holidays_date_array[:5]  # 利用される祝日
+print(option.holiday_start_year)
+print(option.holidays_date_array[:5])
+print(option.holiday_end_year)
+print(option.holidays_date_array[-5:])
 ```
 
+    2016
+    [datetime.date(2016, 1, 1) datetime.date(2016, 1, 11)
+     datetime.date(2016, 2, 11) datetime.date(2016, 3, 20)
+     datetime.date(2016, 3, 21)]
+    2021
+    [datetime.date(2021, 8, 9) datetime.date(2021, 9, 20)
+     datetime.date(2021, 9, 23) datetime.date(2021, 11, 3)
+     datetime.date(2021, 11, 23)]
+    
 
+### バックエンド
 
-
-    array([datetime.date(2015, 1, 1), datetime.date(2015, 1, 12),
-           datetime.date(2015, 2, 11), datetime.date(2015, 3, 21),
-           datetime.date(2015, 4, 29)], dtype=object)
-
-
+祝日・休日を取得する方法として，[jpholiday](https://pypi.org/project/jpholiday/)を利用するか("jpholiday")，特定のcsvファイルを利用するか("csv")選べる．csvは複数のパスを指定でき，
+```
+python scrape_and_make_source.py
+```
+で自動でスクレイピングできる．
 
 
 ```python
-option.holiday_start_year = 2000
-option.holidays_date_array[:5]  # 利用される祝日
+# default
+print(option.backend)
+print(option.csv_source_paths)
+```
+
+    csv
+    [WindowsPath('source/holiday_naikaku.csv')]
+    
+
+### 休日曜日・営業時間 
+
+休日とする曜日を整数で指定できる．デフォルトは土日(5,6)．営業時間は東京証券取引所のものであり，開始時間と終了時間のペアを複数指定できる．
+
+
+```python
+# default
+print(option.holiday_weekdays)
+print(option.intraday_borders)
+```
+
+    [5, 6]
+    [[datetime.time(9, 0), datetime.time(11, 30)], [datetime.time(12, 30), datetime.time(15, 0)]]
+    
+
+### Optionの変更 
+
+下の例では代入しているが，リストの場合はappendでもよい．値の型を間違えると，関数の利用時にエラーが出る．optionの値を初期化したいときは`option.__init__()`を呼べばよい．
+
+
+```python
+option.intraday_borders = [[datetime.time(9, 0), datetime.time(13, 0)],]
+```
+
+
+```python
+extracted_stock_df = extract_workdays_intraday_jp(aware_stock_df, return_as="df")
+extracted_stock_df.at_time(datetime.time(12,0))
 ```
 
 
 
 
-    array([datetime.date(2000, 1, 1), datetime.date(2000, 1, 10),
-           datetime.date(2000, 2, 11), datetime.date(2000, 3, 20),
-           datetime.date(2000, 4, 29)], dtype=object)
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Open_6502</th>
+      <th>High_6502</th>
+      <th>Low_6502</th>
+      <th>Close_6502</th>
+      <th>Volume_6502</th>
+    </tr>
+    <tr>
+      <th>timestamp</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>2020-11-04 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-05 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-06 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-09 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-10 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-11 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-12 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-13 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-16 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-17 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-18 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-19 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-20 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-24 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-25 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-26 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-27 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2020-11-30 12:00:00+09:00</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+</div>
 
 
