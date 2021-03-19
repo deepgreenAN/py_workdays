@@ -92,6 +92,19 @@ aware_stock_df
 
 
 <div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -373,8 +386,10 @@ print(option.csv_source_paths)
 ```
 
     csv
-    [WindowsPath('source/holiday_naikaku.csv')]
+    [WindowsPath('E:/py_workdays/source/holiday_naikaku.csv')]
     
+
+ここで，`csv_source_paths`のデフォルトは自動的にpyworkdaysのあるディレクトリのsourceディレクトリ内のholiday_naikaku.csv一つである．これは内部で`__file__`を参照しているためである．
 
 ### 休日曜日・営業時間 
 

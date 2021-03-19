@@ -138,7 +138,7 @@ class Option():
         self._holiday_end_year = datetime.datetime.now().year
         
         self._backend = "csv"
-        self._csv_source_paths = [Path("source/holiday_naikaku.csv"),]
+        self._csv_source_paths = [Path(__file__).parent / Path("source/holiday_naikaku.csv"),]
         
         self.make_holiday_getter()  # HolidayGetterを作成
         self.make_holidays()  # アトリビュートに追加
