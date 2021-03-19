@@ -403,9 +403,9 @@ def check_workday_jp(select_date):
     is_holiday = np.in1d(select_date_array, option.holidays_date_array).item()  # データ数が一つのため，item
     
     # 休日曜日であるかどうか
-    is_holiday_weekday = any([select_date.weekday()==weekday for weekday in option.holiday_weekdays])
+    is_holiday_weekday = select_date.weekday() in option.holiday_weekdays
     
-    is_workday = (not is_holiday) and (not is_holiday_weekday)
+    is_workday = not any([is_holiday, is_holiday_weekday])
     
     return is_workday
 
@@ -517,7 +517,7 @@ def extract_workdays_jp(df, return_as="df"):
 
 def extract_intraday_jp_index(dt_index, return_as="index"):
     """
-    pd.DatetimeIndexから，日中(9時から11時半，12時半から15時)のデータのものを抽出．出力データ形式をreturn_asで指定する．
+    pd.DatetimeIndexから，日中のデータのものを抽出．出力データ形式をreturn_asで指定する．
     dt_index: pd.DatetimeIndex
         入力するDatetimeIndex
     return_as: str
@@ -531,7 +531,7 @@ def extract_intraday_jp_index(dt_index, return_as="index"):
     if not return_as in return_as_set:
         raise Exception("return_as must be any in {}".format(return_as_set))    
   
-    bool_array = np.array([False]*len(dt_index))
+    bool_array = np.full(len(dt_index), False)
     
     # ボーダー内のboolをTrueにする
     for borders in option.intraday_borders:
@@ -549,7 +549,7 @@ def extract_intraday_jp_index(dt_index, return_as="index"):
 
 def extract_intraday_jp(df, return_as="df"):
     """
-    データフレームから，日中(9時から11時半，12時半から15時)のデータのものを抽出．出力データ形式をreturn_asで指定する．
+    データフレームから，日中のデータのものを抽出．出力データ形式をreturn_asで指定する．
     df: pd.DataFrame(インデックスとしてpd.DatetimeIndex)
         入力データ
     return_as: str
@@ -578,7 +578,7 @@ def extract_intraday_jp(df, return_as="df"):
 
 def extract_workdays_intraday_jp_index(dt_index, return_as="index"):
     """
-    pd.DatetimeIndexから，営業日+日中(9時から11時半，12時半から15時)のデータのものを抽出．出力データ形式をreturn_asで指定する．
+    pd.DatetimeIndexから，営業日+日中のデータのものを抽出．出力データ形式をreturn_asで指定する．
     dt_index: pd.DatetimeIndex
         入力するDatetimeIndex
     return_as: str
@@ -605,7 +605,7 @@ def extract_workdays_intraday_jp_index(dt_index, return_as="index"):
 
 def extract_workdays_intraday_jp(df, return_as="df"):
     """
-    データフレームから，営業日+日中(9時から11時半，12時半から15時)のデータのものを抽出．出力データ形式をreturn_asで指定する．
+    データフレームから，営業日+日中のデータのものを抽出．出力データ形式をreturn_asで指定する．
     df: pd.DataFrame(インデックスとしてpd.DatetimeIndex)
         入力データ
     return_as: str
