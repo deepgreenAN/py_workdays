@@ -1,4 +1,5 @@
-# 営業日・営業時間のデータを取得
+# 営業日・営業時間のデータを取得・抽出
+営業日のデータを取得，pandas.DataFrameから営業日・営業時間のデータを抽出できる．pandas・numpyを用いており[高速](https://github.com/deepgreenAN/py_workdays/wiki/%E9%80%9F%E5%BA%A6%E3%82%92%E8%A8%88%E6%B8%AC)．
 ## requirements
 - jpholiday
 - pytz
@@ -6,6 +7,7 @@
 - numpy
 
 ## 使い方
+`__init__`ファイルが書かれているので，ワーキングディレクトリにクローンするかパスを通せば使える．
 
 ```python
 import datetime
@@ -14,13 +16,14 @@ import pickle
 
 
 ```python
-from py_workdays import get_workdays_jp, check_workday_jp, extract_workdays_jp, extract_workdays_intraday_jp, option
+from py_workdays import get_workdays_jp, check_workday_jp, 
+get_next_workday_jp, get_workdays_number_jp,extract_workdays_intraday_jp, option
 ```
 
-## 営業日を取得
+## 指定期間の営業日を取得
 
 
-```python
+```
 start_date = datetime.date(2020,11,1)
 end_date = datetime.date(2021,1,1)
 
@@ -28,7 +31,7 @@ workdays = get_workdays_jp(start_date, end_date, return_as="date")
 ```
 
 
-```python
+```
 workdays
 ```
 
@@ -60,10 +63,15 @@ workdays
 
 
 
+
+```
+workdays1 = workdays1
+```
+
 ## 営業日かどうか判定 
 
 
-```python
+```
 select_date = datetime.date(2020,1,1)
 
 check_workday_jp(select_date)
@@ -76,12 +84,74 @@ check_workday_jp(select_date)
 
 
 
+## 次の営業日を取得 
+
+
+```
+select_datetime = datetime.date(2020,1,1)
+
+next_workday = get_next_workday_jp(select_datetime, days=6, return_as="dt")
+```
+
+
+```
+next_workday
+```
+
+
+
+
+    Timestamp('2020-01-09 00:00:00')
+
+
+
+## 指定する日数分の営業日を取得 
+
+
+```
+start_date = datetime.date(2020,11,1)
+days = 42
+
+workdays = get_workdays_number_jp(start_date, days)
+workdays
+```
+
+
+
+
+    array([datetime.date(2020, 11, 2), datetime.date(2020, 11, 4),
+           datetime.date(2020, 11, 5), datetime.date(2020, 11, 6),
+           datetime.date(2020, 11, 9), datetime.date(2020, 11, 10),
+           datetime.date(2020, 11, 11), datetime.date(2020, 11, 12),
+           datetime.date(2020, 11, 13), datetime.date(2020, 11, 16),
+           datetime.date(2020, 11, 17), datetime.date(2020, 11, 18),
+           datetime.date(2020, 11, 19), datetime.date(2020, 11, 20),
+           datetime.date(2020, 11, 24), datetime.date(2020, 11, 25),
+           datetime.date(2020, 11, 26), datetime.date(2020, 11, 27),
+           datetime.date(2020, 11, 30), datetime.date(2020, 12, 1),
+           datetime.date(2020, 12, 2), datetime.date(2020, 12, 3),
+           datetime.date(2020, 12, 4), datetime.date(2020, 12, 7),
+           datetime.date(2020, 12, 8), datetime.date(2020, 12, 9),
+           datetime.date(2020, 12, 10), datetime.date(2020, 12, 11),
+           datetime.date(2020, 12, 14), datetime.date(2020, 12, 15),
+           datetime.date(2020, 12, 16), datetime.date(2020, 12, 17),
+           datetime.date(2020, 12, 18), datetime.date(2020, 12, 21),
+           datetime.date(2020, 12, 22), datetime.date(2020, 12, 23),
+           datetime.date(2020, 12, 24), datetime.date(2020, 12, 25),
+           datetime.date(2020, 12, 28), datetime.date(2020, 12, 29),
+           datetime.date(2020, 12, 30), datetime.date(2020, 12, 31)],
+          dtype=object)
+
+
+
 ## 既存のデータフレームから営業日・営業時間のものを取得 
+
+もちろん，営業日のものみ抽出・営業時間のもののみ抽出も可能である．
 
 デフォルトでは，東京証券取引所の営業日(土日・祝日，振替休日を除く)・営業時間(9時～11時30分，12時30分～15時)として利用できる．
 
 
-```python
+```
 with open("aware_stock_df.pickle", "rb") as f:
     aware_stock_df = pickle.load(f)
     
@@ -208,7 +278,7 @@ aware_stock_df
 
 
 
-```python
+```
 extracted_stock_df = extract_workdays_intraday_jp(aware_stock_df, return_as="df")
 extracted_stock_df
 ```
@@ -339,7 +409,7 @@ extracted_stock_df
 祝日・休日はデフォルトでは現在年の5年前から利用できる．開始・終了年はオプションから変更できる
 
 
-```python
+```
 # default
 print(option.holiday_start_year)
 print(option.holidays_date_array[:5])
@@ -366,7 +436,7 @@ python scrape_and_make_source.py
 で自動でスクレイピングできる．
 
 
-```python
+```
 # default
 print(option.backend)
 print(option.csv_source_paths)
@@ -383,7 +453,7 @@ print(option.csv_source_paths)
 休日とする曜日を整数で指定できる．デフォルトは土日(5,6)．営業時間は東京証券取引所のものであり，開始時間と終了時間のペアを複数指定できる．
 
 
-```python
+```
 # default
 print(option.holiday_weekdays)
 print(option.intraday_borders)
@@ -398,12 +468,12 @@ print(option.intraday_borders)
 下の例では代入しているが，リストの場合はappendでもよい．値の型を間違えると，関数の利用時にエラーが出る．optionの値を初期化したいときは`option.__init__()`を呼べばよい．
 
 
-```python
+```
 option.intraday_borders = [[datetime.time(9, 0), datetime.time(13, 0)],]
 ```
 
 
-```python
+```
 extracted_stock_df = extract_workdays_intraday_jp(aware_stock_df, return_as="df")
 extracted_stock_df.at_time(datetime.time(12,0))
 ```
