@@ -512,7 +512,7 @@ def extract_workdays_jp_index(dt_index, return_as="index"):
     holidays_in_span_datetimeindex = option.holidays_datetimeindex[holidays_in_span_index]  # pd.DatetimeIndexを使う
     
     # 休日に含まれないもの，さらに土日に含まれないもののboolインデックスを取得    
-    holiday_bool_array = dt_index.floor("D").isin(holidays_in_span_datetimeindex)  # 休日
+    holiday_bool_array = dt_index.tz_localize(None).floor("D").isin(holidays_in_span_datetimeindex)  # 休日
     
     dt_index_weekday = dt_index.weekday
     holiday_weekday_each_bool_arrays = [dt_index_weekday==weekday for weekday in option.holiday_weekdays]  # inを使うのを回避
