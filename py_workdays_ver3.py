@@ -5,7 +5,7 @@ import datetime
 import numpy as np
 import pandas as pd
 from pathlib import Path
-
+from py_strict_list import StructureStrictList
 
 def check_jst_datetimes_to_naive(*arg_datetimes):
     """
@@ -141,9 +141,9 @@ class Option():
         self.make_holiday_getter()  # HolidayGetterを作成
         self.make_holidays()  # アトリビュートに追加
         
-        self._holiday_weekdays = [5,6]  # 土曜日・日曜日
-        self._intraday_borders = [[datetime.time(9,0), datetime.time(11,30)],
-                                  [datetime.time(12,30), datetime.time(15,0)]]
+        self._holiday_weekdays = StructureStrictList(5,6)  # 土曜日・日曜日
+        self._intraday_borders = StructureStrictList([datetime.time(9,0), datetime.time(11,30)],
+                                  [datetime.time(12,30), datetime.time(15,0)])
         
     
     def make_holiday_getter(self):
