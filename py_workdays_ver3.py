@@ -57,9 +57,6 @@ class JPHolidayGetter:
 
 
 class CSVHolidayGetter:
-    """
-    CSVのソースファイルを利用したHolidayGetter
-    """
     def __init__(self, csv_paths):
         if not isinstance(csv_paths, list):  # リストでないなら，リストにしておく
             csv_paths = [csv_paths]
@@ -96,7 +93,8 @@ class CSVHolidayGetter:
                 left_df = holiday_df
             else:
                 append_bool = ~holiday_df.index.isin(left_df.index)  # 左Dataframeに存在しない部分を追加
-                left_df = left_df.append(holiday_df.loc[append_bool], sort=True)
+                left_df = left_df.append(holiday_df.loc[append_bool])
+                left_df.sort_index(inplace=True)
 
         
         # 指定範囲内の祝日を取得
@@ -138,7 +136,7 @@ class Option():
         self._holiday_end_year = datetime.datetime.now().year
         
         self._backend = "csv"
-        self._csv_source_paths = [Path(__file__).parent / Path("source/holiday_naikaku.csv"),]
+        self._csv_source_paths = [Path("source/holiday_naikaku.csv"),]
         
         self.make_holiday_getter()  # HolidayGetterを作成
         self.make_holidays()  # アトリビュートに追加
@@ -221,9 +219,6 @@ class Option():
     @property
     def holiday_weekdays(self):
         # 中身の確認
-        for weekday in self._holiday_weekdays:
-            if not isinstance(weekday, int):
-                raise Exception("holiday_weekdays must be list of integer(0<=x<=6)")
                 
         return self._holiday_weekdays
     
@@ -234,14 +229,6 @@ class Option():
     @property
     def intraday_borders(self):
         # 中身の確認
-        for border in self._intraday_borders:
-            if not isinstance(border, list) or len(border) != 2:
-                raise Exception("intraday_borders must be list of list whitch has 2 datetime.time")
-                
-            for border_time in border:
-                if not isinstance(border_time, datetime.time):
-                    raise Exception("intraday_borders must be list of list whitch has 2 datetime.time")
-             
         return self._intraday_borders
     
     @intraday_borders.setter
