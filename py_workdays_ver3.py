@@ -136,7 +136,7 @@ class Option():
         self._holiday_end_year = datetime.datetime.now().year
         
         self._backend = "csv"
-        self._csv_source_paths = [Path("source/holiday_naikaku.csv"),]
+        self._csv_source_paths = [Path(__file__).parent / Path("source/holiday_naikaku.csv"),]
         
         self.make_holiday_getter()  # HolidayGetterを作成
         self.make_holidays()  # アトリビュートに追加
@@ -219,20 +219,22 @@ class Option():
     @property
     def holiday_weekdays(self):
         # 中身の確認
-                
         return self._holiday_weekdays
     
     @holiday_weekdays.setter
     def holiday_weekdays(self, weekdays_list):
+        if not self._holiday_weekdays.check_same_structure_with(weekdays_list, include_outer_length=False):
+            raise Exception("This list is invalid for holida_weekdays")
         self._holiday_weekdays = weekdays_list
     
     @property
     def intraday_borders(self):
-        # 中身の確認
         return self._intraday_borders
     
     @intraday_borders.setter
     def intraday_borders(self, borders_list):
+        if not self._intraday_borders.check_same_structure_with(borders_list, include_outer_length=False):
+            raise Exception("This list is invalid for intraday?borders")
         self._intraday_borders = borders_list
 
 
