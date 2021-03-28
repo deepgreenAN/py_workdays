@@ -645,11 +645,11 @@ print(option.intraday_borders)
 
 ### Optionの変更 
 
-下の例では代入しているが，リストの場合はappendでもよい．値の型を間違えると，関数の利用時にエラーが出る．optionの値を初期化したいときは`option.__init__()`を呼べばよい．
+下の例では代入しているが，リストの場合はappendでもよい．値の型を間違えるとエラーが出る．optionの値を初期化したいときは`option.__init__()`を呼べばよい．
 
 
 ```python
-option.intraday_borders = [[datetime.time(9, 0), datetime.time(13, 0)],]
+option.intraday_borders = [[datetime.time(9, 0), datetime.time(13, 0)]]
 ```
 
 
