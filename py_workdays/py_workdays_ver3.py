@@ -82,21 +82,37 @@ class CSVHolidayGetter:
         # datetime.dateをpd.Timestampに変換(datetime.dateは通常pd.DatetimeIndexと比較できないため)
         start_timestamp = pd.Timestamp(start_date)
         end_timestamp = pd.Timestamp(end_date)
-        
-        for i, csv_path in enumerate(self.csv_paths):
-            holiday_df = pd.read_csv(csv_path, 
-                                     header=None,
-                                     names=["date", "holiday_name"],
-                                     index_col="date",
-                                     parse_dates=True
-                                    )
-            if i == 0:
-                left_df = holiday_df
-            else:
-                append_bool = ~holiday_df.index.isin(left_df.index)  # 左Dataframeに存在しない部分を追加
-                left_df = left_df.append(holiday_df.loc[append_bool])
-                left_df.sort_index(inplace=True)
 
+        is_first = True
+        is_multi = False
+
+        for csv_path in self.csv_paths:
+            if csv_path.exists():  # csvファイルが存在する場合
+                holiday_df = pd.read_csv(csv_path, 
+                                        header=None,
+                                        names=["date", "holiday_name"],
+                                        index_col="date",
+                                        parse_dates=True
+                                        )
+            else:
+                holiday_df = None
+
+            if holiday_df is not None:
+                if is_first:
+                    left_df = holiday_df
+                    is_first = False
+                else:
+                    is_multi = True
+
+                if is_multi:
+                    append_bool = ~holiday_df.index.isin(left_df.index)  # 左Dataframeに存在しない部分を追加
+                    left_df = left_df.append(holiday_df.loc[append_bool])
+                    left_df.sort_index(inplace=True)
+
+        if is_first and not is_multi:  # 一度もNone以外が返ってこなかった場合
+            if not with_name:  # 祝日名がいらない場合
+                return np.array([])
+            return np.array([[],[]])
         
         # 指定範囲内の祝日を取得
         holiday_in_span_index = (start_timestamp<=left_df.index)&(left_df.index<end_timestamp)
@@ -242,6 +258,14 @@ class Option():
 
 # Optionの作成
 option = Option()
+
+
+def initialize_source():
+    """
+    csvのソースを初期化する．インストール時の開始時に呼ぶようにする．
+    """
+    all_make_source()
+    option.__init__()  # optionの初期化
 
 
 def get_holidays_jp(start_date, end_date, with_name=False, independent=False):

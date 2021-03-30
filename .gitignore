@@ -9,4 +9,8 @@ Untitled.ipynb
 
 # その他
 .vscode/
-py_strict_list/.git/
+build/
+dist/
+py_workdays.egg-info/
+src/
+py_workdays/source/

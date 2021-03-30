@@ -1,20 +1,12 @@
 from setuptools import setup
 
-install_requires = [
-    "jpholiday",
-    "pytz"
-    "numpy",
-    "pandas",
-    "requests",
-    "py-strict-list @ git+https://github.com/deepgreenAN/py_strict_list@master#egg=py-strict-list"
-]
-packages = [
-    "py_workdays"
+packages=[
+    "py_workdays",
+    "py_workdays.scraping",
 ]
 
 setup(
     name='py-workdays',
     version='0.0.0',
     packages=packages,
-    install_requires=install_requires,
 )

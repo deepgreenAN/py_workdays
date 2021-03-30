@@ -6,5 +6,6 @@ py_workdays/py_workdays_ver3.py
 py_workdays.egg-info/PKG-INFO
 py_workdays.egg-info/SOURCES.txt
 py_workdays.egg-info/dependency_links.txt
-py_workdays.egg-info/requires.txt
 py_workdays.egg-info/top_level.txt
+py_workdays/scraping/__init__.py
+py_workdays/scraping/csv_api_scraping.py

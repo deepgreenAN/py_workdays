@@ -1,5 +1,0 @@
-jpholiday
-pytznumpy
-pandas
-requests
-py-strict-list@ git+https://github.com/deepgreenAN/py_strict_list@master#egg=py-strict-list

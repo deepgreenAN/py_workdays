@@ -1,14 +1,35 @@
 # 営業日・営業時間のデータを取得・抽出
 営業日のデータを取得，pandas.DataFrameから営業日・営業時間のデータを抽出できる．pandas・numpyを用いており[高速](https://github.com/deepgreenAN/py_workdays/wiki/%E9%80%9F%E5%BA%A6%E3%82%92%E8%A8%88%E6%B8%AC)．
-## requirements
+## requires
 - jpholiday
 - pytz
 - pandas
 - numpy
-- requests(休日データの取得に利用)
+- requests
 
+## installation
+クローンしたディレクトリ内で
+```
+pip install -r requirements.txt
+```
+```
+python setup.py install 
+```
+そのディレクトリでないどこか別のディレクトリに移動して
+```
+python
+>>> import py_workdays
+>>> py_workdays.initialize_source()
+```
+そして以下のような結果となればcsvが保存され，インストールは終了である．
+```
+>>> py_workdays.option.holidays_date_array[-5:]
+array([datetime.date(2021, 8, 9), datetime.date(2021, 9, 20),
+       datetime.date(2021, 9, 23), datetime.date(2021, 11, 3),
+       datetime.date(2021, 11, 23)], dtype=object)
+```
+ここで注意しなければならないのは，`py_workdays.initialie_source`をクローンしたディレクトリで実行すると，クローンしたリポジトリ内にソースが作成されてしまうことである．
 ## 使い方
-`__init__`ファイルが書かれているので，ワーキングディレクトリにクローンするかパスを通せば使える．
 
 ```python
 import datetime
