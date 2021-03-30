@@ -68,10 +68,17 @@ def make_source_with_jpholiday(source_path):
     holiday_df_jpholiday.index.name = "date"
     holiday_df_jpholiday.to_csv(source_path, header=False)
 
-if __name__ == "__main__":
-    naikaku_source_path = Path("../source/holiday_naikaku.csv")
+def all_make_source():
+    """
+    3つの方法でcsvファイルを取得
+    """
+    naikaku_source_path = Path(__file__).parent.parent / Path("source/holiday_naikaku.csv")
     make_source_with_naikaku(naikaku_source_path)
-    api_source_path = Path("../source/holiday_api.csv")
+    api_source_path = Path(__file__).parent.parent / Path("source/holiday_api.csv")
     make_source_with_api(api_source_path)
-    jpholiday_source_path = Path("../source/holiday_jpholiday.csv")
+    jpholiday_source_path = Path(__file__).parent.parent / Path("source/holiday_jpholiday.csv")
     make_source_with_jpholiday(jpholiday_source_path)
+
+
+if __name__ == "__main__":
+    pass

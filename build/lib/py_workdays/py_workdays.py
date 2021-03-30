@@ -4,8 +4,8 @@ import datetime
 
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from py_strict_list import StructureStrictList
+
+
 
 def check_jst_datetimes_to_naive(*arg_datetimes):
     """
@@ -29,185 +29,74 @@ def check_jst_datetimes_to_naive(*arg_datetimes):
     return tuple(arg_datetimes)
 
 
-class JPHolidayGetter:
+def get_holiday_jp(start_date, end_date, with_name=False):
     """
-    jpholidayを利用したHolidayGetter
+    期間を指定して祝日を取得
+    
+    start_date: datetime.date
+        開始時刻のdate
+    end_datetime: datetime.date
+        終了時刻のdate
+    eith_name: bool
+        休日の名前を出力するかどうか
+    to_date: bool
+        出力をdatetime.datetimeにするかdatetime.dateにするか
     """
-    def get_holidays(self, start_date, end_date, with_name=False):
-        """
-        期間を指定して祝日を取得．jpholidayを利用して祝日を取得している．
-
-        start_date: datetime.date
-            開始時刻のdate
-        end_datetime: datetime.date
-            終了時刻のdate
-        with_name: bool
-            休日の名前を出力するかどうか
-        to_date: bool
-            出力をdatetime.datetimeにするかdatetime.dateにするか
-        """
-        assert isinstance(start_date, datetime.date) and isinstance(end_date, datetime.date)
-
-        holidays_array = np.array(jpholiday.between(start_date, end_date))
-
-        if not with_name:  # 祝日名がいらない場合
-            return holidays_array[:,0].copy()
-
-        return holidays_array
-
-
-class CSVHolidayGetter:
-    def __init__(self, csv_paths):
-        if not isinstance(csv_paths, list):  # リストでないなら，リストにしておく
-            csv_paths = [csv_paths]
-            
-        self.csv_paths = csv_paths
-        
-    def get_holidays(self, start_date, end_date, with_name=False):
-        """
-        期間を指定して祝日を取得．csvファイルを利用して祝日を取得している．
-
-        start_date: datetime.date
-            開始時刻のdate
-        end_datetime: datetime.date
-            終了時刻のdate
-        with_name: bool
-            休日の名前を出力するかどうか
-        to_date: bool
-            出力をdatetime.datetimeにするかdatetime.dateにするか
-        """
-        assert isinstance(start_date, datetime.date) and isinstance(end_date, datetime.date)
-        
-        # datetime.dateをpd.Timestampに変換(datetime.dateは通常pd.DatetimeIndexと比較できないため)
-        start_timestamp = pd.Timestamp(start_date)
-        end_timestamp = pd.Timestamp(end_date)
-        
-        for i, csv_path in enumerate(self.csv_paths):
-            holiday_df = pd.read_csv(csv_path, 
-                                     header=None,
-                                     names=["date", "holiday_name"],
-                                     index_col="date",
-                                     parse_dates=True
-                                    )
-            if i == 0:
-                left_df = holiday_df
-            else:
-                append_bool = ~holiday_df.index.isin(left_df.index)  # 左Dataframeに存在しない部分を追加
-                left_df = left_df.append(holiday_df.loc[append_bool])
-                left_df.sort_index(inplace=True)
-
-        
-        # 指定範囲内の祝日を取得
-        holiday_in_span_index = (start_timestamp<=left_df.index)&(left_df.index<end_timestamp)
-        holiday_in_span_df = left_df.loc[holiday_in_span_index]
-        
-        holiday_in_span_date_array = holiday_in_span_df.index.date
-        holiday_in_span_name_array = holiday_in_span_df.loc[:,"holiday_name"].values
-        holiday_in_span_array = np.stack([holiday_in_span_date_array,
-                                          holiday_in_span_name_array
-                                         ],
-                                         axis=1
-                                        )
-        
-        if not with_name:  # 祝日名がいらない場合
-            return holiday_in_span_date_array
-            
-        return holiday_in_span_array
+    assert isinstance(start_date, datetime.date) and isinstance(end_date, datetime.date)
+    
+    holydays_array = np.array(jpholiday.between(start_date, end_date))
+    
+    if not with_name:
+        return holydays_array[:,0].copy()
+    
+    return holydays_array
 
 
 class Option():
     """
     オプションの指定のためのクラス
-    holiday_start_year: int
-        利用する休日の開始年
-    holiday_end_year: int
-        利用する休日の終了年
-    backend: str
-        休日取得のバックエンド．csvかjpholidayのいずれかが選べる
-    csv_source_paths: list of str or pathlib.Path
-        バックエンドをcsvにした場合の休日のソースcsvファイル
-    holiday_weekdays: list of int
-        休日曜日の整数のリスト
-    intraday_borders: list of list of 2 datetime.time
-        日中を指定する境界時間のリストのリスト
     """
     def __init__(self):
         self._holiday_start_year = datetime.datetime.now().year-5
         self._holiday_end_year = datetime.datetime.now().year
         
-        self._backend = "csv"
-        #self._csv_source_paths = [Path("E:py_workdays/source/holiday_naikaku.csv"),]
-        self._csv_source_paths = [Path(__file__).parent / Path("source/holiday_naikaku.csv"),]
-        
-        self.make_holiday_getter()  # HolidayGetterを作成
-        self.make_holidays()  # アトリビュートに追加
-        
-        self._holiday_weekdays = StructureStrictList(5,6)  # 土曜日・日曜日
-        self._intraday_borders = StructureStrictList([datetime.time(9,0), datetime.time(11,30)],
-                                  [datetime.time(12,30), datetime.time(15,0)])
-        
-    
-    def make_holiday_getter(self):
-        if self.backend == "jp_holiday":
-            self._holiday_getter = JPHolidayGetter()
-        elif self.backend == "csv":
-            self._holiday_getter = CSVHolidayGetter(self.csv_source_paths)
-        
-    
-    def make_holidays(self):
-        """
-        利用する休日のarrayとDatetimeIndexをアトリビュートとして作成
-        """
-        self._holidays_date_array = self._holiday_getter.get_holidays(start_date=datetime.date(self.holiday_start_year,1,1),
-                                                    end_date=datetime.date(self.holiday_end_year,12,31),
+        # 利用する休日のarray
+        self._holidays_date_array =  get_holiday_jp(start_date=datetime.date(self._holiday_start_year,1,1),
+                                                    end_date=datetime.date(self._holiday_end_year,12,31),
                                                     with_name=False,
                                                    )
-        self._holidays_datetimeindex =  pd.DatetimeIndex(self._holidays_date_array)
-        
+        # 利用する休日のDatetimeIndex
+        self._holidays_datetimeindex = pd.DatetimeIndex(self._holidays_date_array)
     
     @property
     def holiday_start_year(self):
         return self._holiday_start_year
     
-    @holiday_start_year.setter
-    def holiday_start_year(self, year):
-        assert isinstance(year,int)
-        self._holiday_start_year = year
-        self.make_holidays()  # アトリビュートに追加
-    
     @property
     def holiday_end_year(self):
         return self._holiday_end_year
-
+        
+    @holiday_start_year.setter
+    def holiday_start_year(self, year):
+        self._holiday_start_year = year
+        # 利用する休日のarray
+        self._holidays_date_array =  get_holiday_jp(start_date=datetime.date(self._holiday_start_year,1,1),
+                                                    end_date=datetime.date(self._holiday_end_year,12,31),
+                                                    with_name=False,
+                                                   )
+        # 利用する休日のDatetimeIndex
+        self._holidays_datetimeindex = pd.DatetimeIndex(self._holidays_date_array)
+        
     @holiday_end_year.setter
     def holiday_end_year(self, year):
-        assert isinstance(year,int)
         self._holiday_end_year = year
-        self.make_holidays()  # アトリビュートに追加
-    
-    @property
-    def backend(self):
-        return self._backend
-    
-    @backend.setter
-    def backend(self, backend_str):
-        if backend_str not in ("jp_holiday","csv"):
-            raise Exception("backend must be 'jp_holiday' or 'csv'.")
-        self._backend = backend_str
-        self.make_holiday_getter()  # HolidayGetterを作成
-    
-    @property
-    def csv_source_paths(self):
-        #中身の確認
-        for csv_source_path in self._csv_source_paths:
-            if not isinstance(csv_source_path, str) and not isinstance(csv_source_path, Path):
-                raise Exception("csv_source_paths must be list of str or pathlib.Path")
-        
-        return self._csv_source_paths
-    
-    @csv_source_paths.setter
-    def csv_source_paths(self, path_list):
-        self.csv_source_paths = path_list
+        # 利用する休日のarray
+        self._holidays_date_array =  get_holiday_jp(start_date=datetime.date(self._holiday_start_year,1,1),
+                                                    end_date=datetime.date(self._holiday_end_year,12,31),
+                                                    with_name=False,
+                                                   )
+        # 利用する休日のDatetimeIndex
+        self._holidays_datetimeindex = pd.DatetimeIndex(self._holidays_date_array)
         
     @property
     def holidays_date_array(self):
@@ -216,70 +105,10 @@ class Option():
     @property
     def holidays_datetimeindex(self):
         return self._holidays_datetimeindex
-    
-    @property
-    def holiday_weekdays(self):
-        # 中身の確認
-        return self._holiday_weekdays
-    
-    @holiday_weekdays.setter
-    def holiday_weekdays(self, weekdays_list):
-        if not self._holiday_weekdays.check_same_structure_with(weekdays_list, include_outer_length=False):
-            raise Exception("This list is invalid for holida_weekdays")
-        self._holiday_weekdays = StructureStrictList.from_list(weekdays_list)
-    
-    @property
-    def intraday_borders(self):
-        return self._intraday_borders
-    
-    @intraday_borders.setter
-    def intraday_borders(self, borders_list):
-        if not self._intraday_borders.check_same_structure_with(borders_list, include_outer_length=False):
-            raise Exception("This list is invalid for intraday?borders")
-        self._intraday_borders = StructureStrictList.from_list(borders_list)
 
 
 # Optionの作成
 option = Option()
-
-
-def get_holidays_jp(start_date, end_date, with_name=False, independent=False):
-        """
-        期間を指定して祝日を取得．
-
-        start_date: datetime.date
-            開始時刻のdate
-        end_datetime: datetime.date
-            終了時刻のdate
-        with_name: bool
-            休日の名前を出力するかどうか
-        to_date: bool
-            出力をdatetime.datetimeにするかdatetime.dateにするか
-        independent: bool，default:False
-            休日をoptionから独立させるかどうか．FalseならばOption内で保持する休日が取得される
-        """
-        assert isinstance(start_date, datetime.date) and isinstance(end_date, datetime.date)
-        
-        if not independent:
-            # datetime.dateをpd.Timestampに変換(datetime.dateは通常pd.DatetimeIndexと比較できないため)
-            start_timestamp = pd.Timestamp(start_date)
-            end_timestamp = pd.Timestamp(end_date)
-
-            holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<end_timestamp)  # DatetimeIndexを使うことに注意
-            holidays_in_span_array = option.holidays_date_array[holidays_in_span_index]  # ndarrayを使うtamp(end_date)
-
-            return holidays_in_span_array
-        else:
-            if option.backend == "jp_holiday":
-                holiday_getter = JPHolidayGetter()
-            elif option.backend == "csv":
-                holiday_getter = CSVHolidayGetter(option.csv_source_paths)
-                
-            holidays_array = holiday_getter.get_holidays(start_date=start_date,
-                                                         end_date=end_date,
-                                                         with_name=with_name
-                                                        ) 
-            return  holidays_array
 
 
 def get_workdays_jp(start_date, end_date, return_as="date", end_include=False):
@@ -309,7 +138,7 @@ def get_workdays_jp(start_date, end_date, return_as="date", end_include=False):
     
     # 期間中のholidayを取得
     holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<end_timestamp)  # DatetimeIndexを使うことに注意
-    holidays_in_span_datetimeindex = option.holidays_datetimeindex[holidays_in_span_index]  # ndarrayを使う
+    holidays_in_span_array = option.holidays_date_array[holidays_in_span_index]  # ndarrayを使う
 
     # 期間中のdatetimeのarrayを取得
     if end_include:
@@ -319,13 +148,10 @@ def get_workdays_jp(start_date, end_date, return_as="date", end_include=False):
     
     
     # 休日に含まれないもの，さらに土日に含まれないもののboolインデックスを取得
-    holiday_bool_array = days_datetimeindex.isin(holidays_in_span_datetimeindex)  # 休日であるかのブール
+    holiday_bool_array = np.in1d(days_datetimeindex.date, holidays_in_span_array)  # 休日であるかのブール(pd.DatetimeIndex.isin)でもいい
+    sun_or_satur_bool_array = (days_datetimeindex.weekday==5) | (days_datetimeindex.weekday==6)  # 土曜日or日曜日
     
-    days_weekday_array = days_datetimeindex.weekday.values
-    holiday_weekday_each_bool_arrays = [days_weekday_array==weekday for weekday in option.holiday_weekdays]  # inを使うのを回避
-    holiday_weekday_bool_array = np.logical_or.reduce(holiday_weekday_each_bool_arrays)  # 休日曜日
-    
-    workdays_bool_array = (~holiday_bool_array)&(~holiday_weekday_bool_array)  # 休日でなく休日曜日でない
+    workdays_bool_array = (~holiday_bool_array)&(~sun_or_satur_bool_array)  # 休日でなく土日でない
     
     workdays_datetimeindex = days_datetimeindex[workdays_bool_array].copy()
     if return_as=="dt":
@@ -361,7 +187,7 @@ def get_not_workdays_jp(start_date, end_date, return_as="date", end_include=Fals
     
     # 期間中のholidayを取得
     holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<end_timestamp)  # DatetimeIndexを使うことに注意
-    holidays_in_span_datetimeindex = option.holidays_datetimeindex[holidays_in_span_index]  # pd.DatetimeIndexを使う
+    holidays_in_span_array = option.holidays_date_array[holidays_in_span_index]  # ndarrayを使う
 
     # 期間中のdatetimeのarrayを取得
     if end_include:
@@ -369,14 +195,11 @@ def get_not_workdays_jp(start_date, end_date, return_as="date", end_include=Fals
     else:
         days_datetimeindex = pd.date_range(start=start_date, end=end_date-datetime.timedelta(days=1), freq="D")  # 最終日は含めない
     
-    # 休日に含まれないもの，さらに休日曜日に含まれないもののboolインデックスを取得
-    holiday_bool_array = days_datetimeindex.isin(holidays_in_span_datetimeindex)  # 休日であるかのブール
+    # 休日に含まれないもの，さらに土日に含まれないもののboolインデックスを取得
+    holiday_bool_array = np.in1d(days_datetimeindex.date, holidays_in_span_array)  # 休日であるかのブール(pd.DatetimeIndex.isin)でもいい
+    sun_or_satur_bool_array = (days_datetimeindex.weekday==5) | (days_datetimeindex.weekday==6)  # 土曜日or日曜日
     
-    days_weekday_array = days_datetimeindex.weekday.values
-    holiday_weekday_each_bool_arrays = [days_weekday_array==weekday for weekday in option.holiday_weekdays]  # inを使うのを回避
-    holiday_weekday_bool_array = np.logical_or.reduce(holiday_weekday_each_bool_arrays)  # 休日曜日
-    
-    not_workdays_bool_array = holiday_bool_array | holiday_weekday_bool_array  # 休日あるいは休日曜日
+    not_workdays_bool_array = holiday_bool_array | sun_or_satur_bool_array  # 休日あるいは土日
     
     not_workdays_datetimeindex = days_datetimeindex[not_workdays_bool_array].copy()
     if return_as=="dt":
@@ -392,24 +215,22 @@ def check_workday_jp(select_date):
         入力するdate
     """
     assert isinstance(select_date, datetime.date)
+    select_date_array = np.array([select_date])  # データ数が一つのndarray
     # 休日であるかどうか
-    is_holiday = (option.holidays_date_array==select_date).sum() > 0
+    is_holiday = np.in1d(select_date_array, option.holidays_date_array).item()  # データ数が一つのため，item
     
-    # 休日曜日であるかどうか
-    is_holiday_weekday = select_date.weekday() in set(option.holiday_weekdays)
+    # 土曜日か日曜日であるかどうか
+    is_sun_satur = (select_date.weekday()==5) or (select_date.weekday()==6)
     
-    is_workday = not any([is_holiday, is_holiday_weekday])
+    is_workday = (not is_holiday) and (not is_sun_satur)
     
     return is_workday
 
 
-def get_next_workday_jp(select_date, days=1, select_include=False, return_as="date"):
+def get_next_workday_jp(select_date, return_as="date", days=1):
     """
-    指定した日数後の営業日を取得
     select_date: datetime.date
         指定する日時
-    days: int
-        日数
     return_as: str, defalt: 'dt'
         返り値の形式
         - 'dt':pd.Timstamp
@@ -421,58 +242,22 @@ def get_next_workday_jp(select_date, days=1, select_include=False, return_as="da
     if not return_as in return_as_set:
         raise Exception("return_as must be any in {}".format(return_as_set))
         
-    day_counter = 0
-    holiday_weekdays_set = set(option.holiday_weekdays)  #setにした方が高速？
-
-    holiday_bigger_select_index = (option.holidays_date_array<=select_date).sum()
-    # 祝日イテレータ
-    holiday_iter = iter(option.holidays_date_array[holiday_bigger_select_index:])
-    def days_gen(select_date):
-        add_days = 1  # select_dateを含まない
+    def get_next_workday_jp_gen(select_date):
+        add_days=1
         while True:
-            yield select_date + datetime.timedelta(days=add_days)
+            next_day = select_date + datetime.timedelta(days=add_days)
+            if check_workday_jp(next_day):
+                yield next_day
             add_days += 1
-    # 日にちイテレータ
-    days_iter = days_gen(select_date)
-
-    # 以下二つのイテレーターを比較し，one_dayが休日に含まれる場合，カウントしカウントが指定に達した場合終了する
-    one_day = next(days_iter)
-
-    one_holiday = next(holiday_iter)
-
-    while True:
-        if one_day==one_holiday:  #その日が祝日である
-            one_holiday = next(holiday_iter)
-        else:
-            if not one_day.weekday() in holiday_weekdays_set:  #その日が休日曜日である
-                #print(one_day)
-                day_counter += 1  # カウンターをインクリメント
-
-        if day_counter >= days:
-            break
-
-        one_day = next(days_iter)
-        
+    
+    next_workday_gen = get_next_workday_jp_gen(select_date)
+    for i in range(days):
+        next_day = next(next_workday_gen)
+    
     if return_as=="date":
-        return one_day
+        return next_day
     elif return_as=="dt":
-        return pd.Timestamp(one_day)
-
-
-def get_workdays_number_jp(start_date, days, return_as="date"):
-    """
-    指定した日数分の営業日を取得
-    start_date: datetime.date
-        開始日時
-    days: int
-        日数
-    return_as: str, defalt: 'dt'
-        返り値の形式
-        - 'dt':pd.Timstamp
-        - 'datetime': datetime.datetime array
-    """
-    end_date = get_next_workday_jp(start_date, days=days, return_as="date")
-    return get_workdays_jp(start_date, end_date, end_include=True, return_as=return_as)
+        return pd.Timestamp(next_day)
         
 
 def extract_workdays_jp_index(dt_index, return_as="index"):
@@ -499,16 +284,13 @@ def extract_workdays_jp_index(dt_index, return_as="index"):
     # 期間内のholidayを取得
     holidays_in_span_index = ((start_datetime-datetime.timedelta(days=1))<option.holidays_datetimeindex)&\
     (option.holidays_datetimeindex<=end_datetime)  # DatetimeIndexを使うことに注意, 当日を含めるため，startから1を引いている．
-    holidays_in_span_datetimeindex = option.holidays_datetimeindex[holidays_in_span_index]  # pd.DatetimeIndexを使う
+    holidays_in_span_array = option.holidays_date_array[holidays_in_span_index]  # ndarrayを使う
     
     # 休日に含まれないもの，さらに土日に含まれないもののboolインデックスを取得    
-    holiday_bool_array = dt_index.tz_localize(None).floor("D").isin(holidays_in_span_datetimeindex)  # 休日
+    holiday_bool_array = np.in1d(dt_index.date, holidays_in_span_array)  # 休日
+    sun_or_satur_bool_array = (dt_index.weekday==5) | (dt_index.weekday==6)  # 土曜日or日曜日
     
-    dt_index_weekday = dt_index.weekday
-    holiday_weekday_each_bool_arrays = [dt_index_weekday==weekday for weekday in option.holiday_weekdays]  # inを使うのを回避
-    holiday_weekday_bool_array = np.logical_or.reduce(holiday_weekday_each_bool_arrays)  # 休日曜日
-    
-    workdays_bool_array = (~holiday_bool_array)&(~holiday_weekday_bool_array)  # 休日でなく休日曜日でない
+    workdays_bool_array = (~holiday_bool_array)&(~sun_or_satur_bool_array)  # 休日でなく土日でない
     if return_as=="bool":  # boolで返す場合
         return workdays_bool_array
     
@@ -548,7 +330,7 @@ def extract_workdays_jp(df, return_as="df"):
 
 def extract_intraday_jp_index(dt_index, return_as="index"):
     """
-    pd.DatetimeIndexから，日中のデータのものを抽出．出力データ形式をreturn_asで指定する．
+    pd.DatetimeIndexから，日中(9時から11時半，12時半から15時)のデータのものを抽出．出力データ形式をreturn_asで指定する．
     dt_index: pd.DatetimeIndex
         入力するDatetimeIndex
     return_as: str
@@ -562,13 +344,15 @@ def extract_intraday_jp_index(dt_index, return_as="index"):
     if not return_as in return_as_set:
         raise Exception("return_as must be any in {}".format(return_as_set))    
   
-    bool_array = np.full(len(dt_index), False)
+    bool_array = np.array([False]*len(dt_index))
     
-    # ボーダー内のboolをTrueにする
-    for borders in option.intraday_borders:
-        start_time, end_time = borders[0], borders[1]  # 開始時刻と終了時刻
-        in_border_indice = dt_index.indexer_between_time(start_time=start_time, end_time=end_time, include_end=False)
-        bool_array[in_border_indice] = True
+    # 午前をTrueに
+    am_indice = dt_index.indexer_between_time(start_time=datetime.time(9,0), end_time=datetime.time(11,30), include_end=False)
+    bool_array[am_indice] = True
+    
+    # 午後をTrueに
+    pm_indice = dt_index.indexer_between_time(start_time=datetime.time(12,30), end_time=datetime.time(15,0), include_end=False)
+    bool_array[pm_indice] = True
     
     if return_as=="bool":
         return bool_array
@@ -580,7 +364,7 @@ def extract_intraday_jp_index(dt_index, return_as="index"):
 
 def extract_intraday_jp(df, return_as="df"):
     """
-    データフレームから，日中のデータのものを抽出．出力データ形式をreturn_asで指定する．
+    データフレームから，日中(9時から11時半，12時半から15時)のデータのものを抽出．出力データ形式をreturn_asで指定する．
     df: pd.DataFrame(インデックスとしてpd.DatetimeIndex)
         入力データ
     return_as: str
@@ -609,7 +393,7 @@ def extract_intraday_jp(df, return_as="df"):
 
 def extract_workdays_intraday_jp_index(dt_index, return_as="index"):
     """
-    pd.DatetimeIndexから，営業日+日中のデータのものを抽出．出力データ形式をreturn_asで指定する．
+    pd.DatetimeIndexから，営業日+日中(9時から11時半，12時半から15時)のデータのものを抽出．出力データ形式をreturn_asで指定する．
     dt_index: pd.DatetimeIndex
         入力するDatetimeIndex
     return_as: str
@@ -636,7 +420,7 @@ def extract_workdays_intraday_jp_index(dt_index, return_as="index"):
 
 def extract_workdays_intraday_jp(df, return_as="df"):
     """
-    データフレームから，営業日+日中のデータのものを抽出．出力データ形式をreturn_asで指定する．
+    データフレームから，営業日+日中(9時から11時半，12時半から15時)のデータのものを抽出．出力データ形式をreturn_asで指定する．
     df: pd.DataFrame(インデックスとしてpd.DatetimeIndex)
         入力データ
     return_as: str
@@ -668,13 +452,13 @@ def extract_workdays_intraday_jp(df, return_as="df"):
 if __name__ == "__main__":
     import pickle
     ##########################
-    ### get_holidays_jp
+    ### get_holiday_jp
     ##########################
     
     start_date = datetime.date(2019, 1, 1)
     end_date = datetime.date(2020, 12, 31)
 
-    holidays = get_holidays_jp(start_date, end_date, with_name=False)
+    holidays = get_holiday_jp(start_date, end_date, with_name=False)
     print(holidays)
 
     
