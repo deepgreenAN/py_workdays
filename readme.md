@@ -1,6 +1,6 @@
 # 営業日・営業時間のデータを取得・抽出
 営業日のデータを取得，pandas.DataFrameから営業日・営業時間のデータを抽出できる．pandas・numpyを用いており[高速](https://github.com/deepgreenAN/py_workdays/wiki/%E9%80%9F%E5%BA%A6%E3%82%92%E8%A8%88%E6%B8%AC)．
-## requires
+## requirements
 - jpholiday
 - pytz
 - pandas
@@ -11,6 +11,10 @@
 クローンしたディレクトリ内で
 ```
 pip install -r requirements.txt
+```
+(test)
+```
+python setup.py test
 ```
 ```
 python setup.py install 
@@ -632,7 +636,7 @@ print(option.holidays_date_array[-5:])
 
 祝日・休日を取得する方法として，[jpholiday](https://pypi.org/project/jpholiday/)を利用するか("jpholiday")，特定のcsvファイルを利用するか("csv")選べる．csvは複数のパスを指定でき，
 ```
-python scrape_and_make_source.py
+py_restart.all_make_source()
 ```
 で自動でスクレイピングできる．
 
@@ -666,7 +670,7 @@ print(option.intraday_borders)
 
 ### Optionの変更 
 
-下の例では代入しているが，リストの場合はappendでもよい．値の型を間違えるとエラーが出る．optionの値を初期化したいときは`option.__init__()`を呼べばよい．
+下の例では代入しているが，リストの場合はappendでもよい．値の型を間違えるとエラーが出る．optionの値を初期化したいときは`option.__init__()`を呼べばよい．休日が反映されない場合は明示的に`option.make_holidays()`を呼ぶ（廃止予定）．
 
 
 ```python

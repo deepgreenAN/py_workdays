@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from py_strict_list import StructureStrictList
-from .scraping import all_make_source
+from py_workdays.scraping import all_make_source
 
 def check_jst_datetimes_to_naive(*arg_datetimes):
     """
@@ -26,9 +26,12 @@ def check_jst_datetimes_to_naive(*arg_datetimes):
             raise Exception("timezones must be Asia/Tokyo")
         # naiveなdatetimeに変更
         arg_datetimes = [one_datetime.replace(tzinfo=None) for one_datetime in arg_datetimes]
-        
-    return tuple(arg_datetimes)
-
+    
+    # 引数が一つであるかどうか
+    if len(arg_datetimes) > 1:  # 引数が複数の場合
+        return tuple(arg_datetimes)
+    else:  # 引数が一つの場合
+        return arg_datetimes[0]
 
 class JPHolidayGetter:
     """
@@ -153,8 +156,8 @@ class Option():
         self._holiday_end_year = datetime.datetime.now().year
         
         self._backend = "csv"
-        #self._csv_source_paths = [Path("E:py_workdays/source/holiday_naikaku.csv"),]
-        self._csv_source_paths = [Path(__file__).parent / Path("source/holiday_naikaku.csv"),]
+        #self._csv_source_paths = StructureStrictList(Path("py_workdays/source/holiday_naikaku.csv"))
+        self._csv_source_paths = StructureStrictList(Path(__file__).parent / Path("source/holiday_naikaku.csv"))
         
         self.make_holiday_getter()  # HolidayGetterを作成
         self.make_holidays()  # アトリビュートに追加
@@ -170,10 +173,9 @@ class Option():
         elif self.backend == "csv":
             self._holiday_getter = CSVHolidayGetter(self.csv_source_paths)
         
-    
     def make_holidays(self):
         """
-        利用する休日のarrayとDatetimeIndexをアトリビュートとして作成
+        利用する休日のarrayとDatetimeIndexをアトリビュートとして作成．csv_pathを追加したときにも呼ぶ
         """
         self._holidays_date_array = self._holiday_getter.get_holidays(start_date=datetime.date(self.holiday_start_year,1,1),
                                                     end_date=datetime.date(self.holiday_end_year,12,31),
@@ -181,7 +183,6 @@ class Option():
                                                    )
         self._holidays_datetimeindex =  pd.DatetimeIndex(self._holidays_date_array)
         
-    
     @property
     def holiday_start_year(self):
         return self._holiday_start_year
@@ -212,19 +213,18 @@ class Option():
             raise Exception("backend must be 'jp_holiday' or 'csv'.")
         self._backend = backend_str
         self.make_holiday_getter()  # HolidayGetterを作成
+        self.make_holidays()  # 休日の作成
     
     @property
-    def csv_source_paths(self):
-        #中身の確認
-        for csv_source_path in self._csv_source_paths:
-            if not isinstance(csv_source_path, str) and not isinstance(csv_source_path, Path):
-                raise Exception("csv_source_paths must be list of str or pathlib.Path")
-        
+    def csv_source_paths(self):        
         return self._csv_source_paths
     
     @csv_source_paths.setter
     def csv_source_paths(self, path_list):
-        self.csv_source_paths = path_list
+        if not self._csv_source_paths.check_same_structure_with(path_list, include_outer_length=False):
+            raise Exception("This list is invalid for csv_source_paths")
+        self._csv_source_paths = StructureStrictList.from_list(path_list)
+        self.make_holidays()  # 休日の作成
         
     @property
     def holidays_date_array(self):
@@ -428,6 +428,24 @@ def check_workday_jp(select_date):
     return is_workday
 
 
+def iter_and_repeat(iterable):
+    """
+    最初は普通のイテレーターで終了した場合に同じものを返すイテレーター
+    """
+    iterable = iter(iterable)
+    is_end = False
+    while True:
+        if not is_end:
+            try:
+                item = next(iterable)
+                yield item
+            except StopIteration:
+                last_item = item
+                is_end = True
+        else:
+            yield last_item
+
+
 def get_next_workday_jp(select_date, days=1, select_include=False, return_as="date"):
     """
     指定した日数後の営業日を取得
@@ -446,34 +464,44 @@ def get_next_workday_jp(select_date, days=1, select_include=False, return_as="da
     if not return_as in return_as_set:
         raise Exception("return_as must be any in {}".format(return_as_set))
         
-    day_counter = 0
+    if days <= 0 or not isinstance(days, int):
+        raise Exception("select_days is must be integer > 0")
+        
     holiday_weekdays_set = set(option.holiday_weekdays)  #setにした方が高速？
 
-    holiday_bigger_select_index = (option.holidays_date_array<=select_date).sum()
-    # 祝日イテレータ
-    holiday_iter = iter(option.holidays_date_array[holiday_bigger_select_index:])
+    if (option.holidays_date_array==select_date).sum() > 0:  #selet_day が休日の場合
+        holiday_bigger_select_index = (option.holidays_date_array<select_date).sum()
+    else:  # select_dayが休日でない場合
+        holiday_bigger_select_index = (option.holidays_date_array<=select_date).sum()
+
+    holiday_iter = iter_and_repeat(iter(option.holidays_date_array[holiday_bigger_select_index:]))
     def days_gen(select_date):
-        add_days = 1  # select_dateを含まない
+        add_days = 0  # select_dateを含める
         while True:
             yield select_date + datetime.timedelta(days=add_days)
             add_days += 1
-    # 日にちイテレータ
     days_iter = days_gen(select_date)
 
-    # 以下二つのイテレーターを比較し，one_dayが休日に含まれる場合，カウントしカウントが指定に達した場合終了する
+    # 以下二つのイテレーターを比較し，one_dayが休日に含まれる場合カウントし，カウントが指定に達した場合終了する
     one_day = next(days_iter)
-
     one_holiday = next(holiday_iter)
+    assert(one_day <= one_holiday)  # これを満たさないと祝日検出ができない
+
+    # 最初はwhileの外で，さらに初日がworkdaysでもカウントしない
+    if one_day==one_holiday:
+        one_holiday = next(holiday_iter)   
+
+    one_day = next(days_iter)
+    counter = 0
 
     while True:
         if one_day==one_holiday:  #その日が祝日である
             one_holiday = next(holiday_iter)
         else:
             if not one_day.weekday() in holiday_weekdays_set:  #その日が休日曜日である
-                #print(one_day)
-                day_counter += 1  # カウンターをインクリメント
+                counter += 1  # カウンターをインクリメント
 
-        if day_counter >= days:
+        if counter>= days:
             break
 
         one_day = next(days_iter)
@@ -496,8 +524,10 @@ def get_workdays_number_jp(start_date, days, return_as="date"):
         - 'dt':pd.Timstamp
         - 'datetime': datetime.datetime array
     """
+    #get_net_workday_jpでは初日はworkdayに含めないので，初日がworkdayならend_includeをFalseにする
+    is_initial_day_workday = check_workday_jp(start_date)
     end_date = get_next_workday_jp(start_date, days=days, return_as="date")
-    return get_workdays_jp(start_date, end_date, end_include=True, return_as=return_as)
+    return get_workdays_jp(start_date, end_date, end_include=not is_initial_day_workday, return_as=return_as)
         
 
 def extract_workdays_jp_index(dt_index, return_as="index"):
@@ -559,16 +589,17 @@ def extract_workdays_jp(df, return_as="df"):
     if not return_as in return_as_set:
         raise Exception("return_as must be any in {}".format(return_as_set))
     
-    workdays_bool_array = extract_workdays_jp_index(df.index, return_as="bool")
     if return_as=="bool":
+        workdays_bool_array = extract_workdays_jp_index(df.index, return_as="bool")
         return workdays_bool_array
-    
-    workdays_df_indice = df.index[workdays_bool_array]
-    if return_as=="index":
+    elif return_as=="index":
+        workdays_bool_array = extract_workdays_jp_index(df.index, return_as="bool")
+        workdays_df_indice = df.index[workdays_bool_array]
         return workdays_df_indice
-
-    out_df = df.loc[workdays_df_indice].copy()
-    return out_df
+    else:
+        workdays_bool_array = extract_workdays_jp_index(df.index, return_as="bool")
+        out_df = df[workdays_bool_array].copy()
+        return out_df
 
 
 def extract_intraday_jp_index(dt_index, return_as="index"):
@@ -619,17 +650,18 @@ def extract_intraday_jp(df, return_as="df"):
     return_as_set = {"df", "index", "bool"}
     if not return_as in return_as_set:
         raise Exception("return_as must be any in {}".format(return_as_set))    
-  
-    intraday_bool_array = extract_intraday_jp_index(df.index, return_as="bool")
+
     if return_as=="bool":
-        return intraday_bool_array
-    
-    intraday_indice = df.index[intraday_bool_array]
-    if return_as=="index":
+        intraday_bool_array = extract_intraday_jp_index(df.index, return_as="bool")
+        return intraday_bool_array 
+    elif return_as=="index":
+        intraday_bool_array = extract_intraday_jp_index(df.index, return_as="bool")
+        intraday_indice = df.index[intraday_bool_array]
         return intraday_indice
-    
-    out_df = df.loc[intraday_indice].copy()
-    return out_df
+    else:
+        intraday_bool_array = extract_intraday_jp_index(df.index, return_as="bool")
+        out_df = df[intraday_bool_array].copy()
+        return out_df
 
 
 def extract_workdays_intraday_jp_index(dt_index, return_as="index"):
@@ -676,18 +708,17 @@ def extract_workdays_intraday_jp(df, return_as="df"):
     if not return_as in return_as_set:
         raise Exception("return_as must be any in {}".format(return_as_set))    
        
-    workday_intraday_bool_array = extract_workdays_intraday_jp_index(df.index, return_as="bool")
-    
     if return_as=="bool":
+        workday_intraday_bool_array = extract_workdays_intraday_jp_index(df.index, return_as="bool")
         return workday_intraday_bool_array
-    
-    workday_intraday_indice = df.index[workday_intraday_bool_array]
-    
-    if return_as=="index":
+    elif return_as=="index":
+        workday_intraday_bool_array = extract_workdays_intraday_jp_index(df.index, return_as="bool")
+        workday_intraday_indice = df.index[workday_intraday_bool_array]
         return workday_intraday_indice
-    
-    out_df = df.loc[workday_intraday_indice].copy()
-    return out_df
+    else:
+        workday_intraday_bool_array = extract_workdays_intraday_jp_index(df.index, return_as="bool")
+        out_df = df[workday_intraday_bool_array].copy()
+        return out_df
 
 
 

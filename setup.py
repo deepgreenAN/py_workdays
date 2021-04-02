@@ -9,4 +9,5 @@ setup(
     name='py-workdays',
     version='0.0.0',
     packages=packages,
+    test_suit="test"
 )
