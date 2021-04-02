@@ -11,6 +11,6 @@ Untitled.ipynb
 .vscode/
 build/
 dist/
-#py_workdays.egg-info/
+py_workdays.egg-info/
 src/
 py_workdays/source/
