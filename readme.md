@@ -635,11 +635,7 @@ print(option.holidays_date_array[-5:])
 
 ### バックエンド
 
-祝日・休日を取得する方法として，[jpholiday](https://pypi.org/project/jpholiday/)を利用するか("jpholiday")，特定のcsvファイルを利用するか("csv")選べる．csvは複数のパスを指定できる(追加方法は後述)．祝日のcsvファイルを新しくしたい場合は
-```
-python scrape_and_make_source.py
-```
-を実行するか．`py_restart.all_make_source()`を実行する．
+祝日・休日を取得する方法として，[jpholiday](https://pypi.org/project/jpholiday/)を利用するか("jpholiday")，特定のcsvファイルを利用するか("csv")選べる．csvは複数のパスを指定できる(追加方法は後述)．祝日のcsvファイルを新しくしたい場合は`py_restart.all_make_source()`を実行する．
 
 
 ```python
