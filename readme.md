@@ -648,7 +648,7 @@ print(option.csv_source_paths)
     [WindowsPath('E:/py_workdays/py_workdays/source/holiday_naikaku.csv')]
     
 
-ここで，`csv_source_paths`のデフォルトは自動的にpyworkdaysのあるディレクトリのsourceディレクトリ内のholiday_naikaku.csv一つである．これは内部で`__file__`を参照しているためである．
+ここで，`csv_source_paths`のデフォルトは自動的にpyworkdaysのあるディレクトリのsourceディレクトリ内のholiday_naikaku.csv一つとなる．これは内部で`__file__`を参照しているためである．
 
 ### 休日曜日・営業時間 
 
