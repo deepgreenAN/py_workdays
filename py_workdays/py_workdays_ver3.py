@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from py_strict_list import StructureStrictList
-from py_workdays.scraping import all_make_source
+from .scraping import all_make_source
 
 def check_jst_datetimes_to_naive(*arg_datetimes):
     """
