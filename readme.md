@@ -173,7 +173,7 @@ workdays
 
 
 ```python
-with open("aware_stock_df.pickle", "rb") as f:
+with open("notebooks/aware_stock_df.pickle", "rb") as f:
     aware_stock_df = pickle.load(f)
     
 aware_stock_df.at_time(datetime.time(9,0))
@@ -636,7 +636,7 @@ print(option.holidays_date_array[-5:])
 
 祝日・休日を取得する方法として，[jpholiday](https://pypi.org/project/jpholiday/)を利用するか("jpholiday")，特定のcsvファイルを利用するか("csv")選べる．csvは複数のパスを指定でき，
 ```
-py_restart.all_make_source()
+python scrape_and_make_source.py
 ```
 で自動でスクレイピングできる．
 
@@ -648,7 +648,7 @@ print(option.csv_source_paths)
 ```
 
     csv
-    [WindowsPath('E:/py_workdays/source/holiday_naikaku.csv')]
+    [WindowsPath('E:/py_workdays/py_workdays/source/holiday_naikaku.csv')]
     
 
 ここで，`csv_source_paths`のデフォルトは自動的にpyworkdaysのあるディレクトリのsourceディレクトリ内のholiday_naikaku.csv一つである．これは内部で`__file__`を参照しているためである．
@@ -670,7 +670,7 @@ print(option.intraday_borders)
 
 ### Optionの変更 
 
-下の例では代入しているが，リストの場合はappendでもよい．値の型を間違えるとエラーが出る．optionの値を初期化したいときは`option.__init__()`を呼べばよい．休日が反映されない場合は明示的に`option.make_holidays()`を呼ぶ（廃止予定）．
+下の例では代入しているが，リストの場合はappendでもよい．値の型を間違えるとエラーが出る．optionの値を初期化したいときは`option.__init__()`を呼べばよい．
 
 
 ```python
@@ -687,6 +687,19 @@ extracted_stock_df.at_time(datetime.time(12,0))
 
 
 <div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -856,3 +869,19 @@ extracted_stock_df.at_time(datetime.time(12,0))
 </div>
 
 
+
+csv_source_pathは追加するだけで取得できる休日の更新が行進されるので，以下のようにすればよい
+
+```python
+from pathlib import Path
+some_source_path = Path("some_source.csv")
+option.csv_source_path.append(some_source_path)
+```
+
+some_source.csvは以下のような形式になっている必要がある
+
+```
+1955-01-01,元日
+1955-01-15,成人の日
+1955-03-21,春分の日
+```

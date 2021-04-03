@@ -2,6 +2,7 @@ import unittest
 import numpy as np
 import datetime
 import pandas as pd
+from pathlib import Path
 
 from py_workdays import get_holidays_jp, get_workdays_jp, get_not_workdays_jp
 from py_workdays import check_workday_jp, get_next_workday_jp, get_workdays_number_jp
@@ -122,7 +123,21 @@ class TestOption(unittest.TestCase):
         option.holiday_start_year = 2021
         option.holiday_end_year = 2021
         self.assertTrue(np.array_equal(option.holidays_date_array, true_holidays_2021()))
-
+        
+    def test_append_source_path(self):
+        option.backend = "csv"
+        temp_source_path = Path("py_workdays/source/temp.csv")
+        # 存在しない祝日を記したcsvファイルを追加
+        dt_index = pd.DatetimeIndex([datetime.date(1900,1,1)])
+        new_holiday_df = pd.DataFrame({"holiday_name":["元日"]}, index=dt_index)
+        new_holiday_df.to_csv(temp_source_path, header=False)
+        
+        option.holiday_start_year = 1900  # このタイミングで1900年にしておく
+        
+        option.csv_source_paths.append(temp_source_path)  # csvパスを追加
+        self.assertEqual(option.holidays_date_array[0],datetime.date(1900,1,1))
+        
+        temp_source_path.unlink()
 
 if __name__ == "__main__":
     unittest.main()
