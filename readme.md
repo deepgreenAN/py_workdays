@@ -6,6 +6,7 @@
 - pandas
 - numpy
 - requests
+- [py_strict_list](https://github.com/deepgreenAN/py_strict_list)
 
 ## installation
 クローンしたディレクトリ内で
@@ -857,7 +858,7 @@ extracted_stock_df.at_time(datetime.time(12,0))
 
 
 
-csv_source_pathは追加するだけで取得できる休日の更新が行進されるので，以下のようにすればよい
+csv_source_pathは追加するだけで取得できる休日の更新が行われるので，以下のようにすればよい
 
 ```python
 from pathlib import Path
