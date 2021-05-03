@@ -3,4 +3,3 @@ pytz
 numpy
 pandas
 requests
--e git+https://github.com/deepgreenAN/py_strict_list.git#egg=py_strict_list

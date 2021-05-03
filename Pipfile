@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+jpholiday = "*"
+pytz = "*"
+numpy = "*"
+pandas = "*"
+requests = "*"
+py-strict-list = {editable = true, git = "https://github.com/deepgreenAN/py_strict_list.git"}
+
+[dev-packages]
+jupyter = "*"
+jupyter-contrib-nbextensions = "*"
+pyreadline = "*"
+
+[requires]
+python_version = "3.6"
