@@ -76,6 +76,7 @@ def get_near_workday_intraday_jp(select_datetime, is_after=True):
     """
     assert isinstance(select_datetime, datetime.datetime)
     select_date = select_datetime.date()
+    #from IPython.core.debugger import Pdb; Pdb().set_trace()
     
     if check_workday_jp(select_date):  # 営業日の場合
         if check_workday_intraday_jp(select_datetime):  # 営業時間・営業日の場合
@@ -87,7 +88,7 @@ def get_near_workday_intraday_jp(select_datetime, is_after=True):
             
             if is_after:
                 bigger_border_starts = [one_border for one_border in border_starts if one_border > select_time]
-                if len(bigger_border_starts) > 0:
+                if len(bigger_border_starts) > 0:  # 指定時間より遅い営業時間の開始ボーダーがある場合
                     out_time = min(bigger_border_starts)
                     out_datetime = datetime.datetime(select_date.year,
                                                      select_date.month,
@@ -98,8 +99,8 @@ def get_near_workday_intraday_jp(select_datetime, is_after=True):
                                                     )
                     out_datetime = get_timezone_datetime_like(out_datetime, select_datetime)
                     return out_datetime, "border_start"
-                else:
-                    out_date = get_near_workday_jp(select_date, is_after=True)
+                else:  # 指定時間より遅い営業時間が存在しない場合
+                    out_date = get_next_workday_jp(select_date)
                     out_time = min(border_starts)
                     out_datetime = datetime.datetime(out_date.year,
                                                      out_date.month,
@@ -113,7 +114,7 @@ def get_near_workday_intraday_jp(select_datetime, is_after=True):
             
             else:
                 smaller_border_ends = [one_border for one_border in border_ends if one_border <= select_time]
-                if len(smaller_border_ends) > 0:
+                if len(smaller_border_ends) > 0:  # 指定時間より早い営業時間の終了ボーダーがある場合
                     out_time = max(smaller_border_ends)
                     out_datetime = datetime.datetime(select_date.year,
                                                      select_date.month,
@@ -124,8 +125,8 @@ def get_near_workday_intraday_jp(select_datetime, is_after=True):
                                                     )
                     out_datetime = get_timezone_datetime_like(out_datetime, select_datetime)
                     return out_datetime, "border_end"
-                else:
-                    out_date = get_near_workday_jp(select_date, is_after=False)
+                else:  # 指定時間より早い営業時間が存在しない場合
+                    out_date = get_previous_workday_jp(select_date)
                     out_time = max(border_ends)
                     out_datetime = datetime.datetime(out_date.year,
                                                      out_date.month,
