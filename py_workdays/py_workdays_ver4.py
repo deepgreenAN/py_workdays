@@ -27,6 +27,7 @@ class JPHolidayGetter:
             出力をdatetime.datetimeにするかdatetime.dateにするか
         """
         assert isinstance(start_date, datetime.date) and isinstance(end_date, datetime.date)
+        assert not isinstance(start_date, datetime.datetime) and not isinstance(end_date, datetime.datetime)
 
         holidays_array = np.array(jpholiday.between(start_date, end_date))
 
@@ -57,6 +58,7 @@ class CSVHolidayGetter:
             出力をdatetime.datetimeにするかdatetime.dateにするか
         """
         assert isinstance(start_date, datetime.date) and isinstance(end_date, datetime.date)
+        assert not isinstance(start_date, datetime.datetime) and not isinstance(end_date, datetime.datetime)
         
         # datetime.dateをpd.Timestampに変換(datetime.dateは通常pd.DatetimeIndexと比較できないため)
         start_timestamp = pd.Timestamp(start_date)
@@ -232,6 +234,7 @@ def get_holidays_jp(start_date, end_date, with_name=False, independent=False):
             休日をoptionから独立させるかどうか．FalseならばOption内で保持する休日が取得される
         """
         assert isinstance(start_date, datetime.date) and isinstance(end_date, datetime.date)
+        assert not isinstance(start_date, datetime.datetime) and not isinstance(end_date, datetime.datetime)
         
         if not independent:
             # datetime.dateをpd.Timestampに変換(datetime.dateは通常pd.DatetimeIndexと比較できないため)
@@ -271,24 +274,28 @@ def get_workdays_jp(start_date, end_date, return_as="date", end_include=False):
         最終日も含めて出力するか
     """
     assert isinstance(start_date, datetime.date) and isinstance(end_date, datetime.date)
+    assert not isinstance(start_date, datetime.datetime) and not isinstance(end_date, datetime.datetime)
     # 返り値の形式の指定
     return_as_set = {"dt", "date"}
     if not return_as in return_as_set:
         raise Exception("return_as must be any in {}".format(return_as_set))
-    
+        
     # datetime.dateをpd.Timestampに変換(datetime.dateは通常pd.DatetimeIndexと比較できないため)
     start_timestamp = pd.Timestamp(start_date)
     end_timestamp = pd.Timestamp(end_date)
     
-    # 期間中のholidayを取得
-    holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<end_timestamp)  # DatetimeIndexを使うことに注意
-    holidays_in_span_datetimeindex = option.holidays_datetimeindex[holidays_in_span_index]  # ndarrayを使う
-
     # 期間中のdatetimeのarrayを取得
     if end_include:
         days_datetimeindex = pd.date_range(start=start_date, end=end_date, freq="D")  # 最終日も含める
     else:
         days_datetimeindex = pd.date_range(start=start_date, end=end_date-datetime.timedelta(days=1), freq="D")  # 最終日は含めない
+    
+    # 期間中のholidayを取得
+    if end_include:
+        holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<=end_timestamp)  # DatetimeIndexを使うことに注意
+    else:
+        holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<end_timestamp)  # DatetimeIndexを使うことに注意
+    holidays_in_span_datetimeindex = option.holidays_datetimeindex[holidays_in_span_index]
     
     
     # 休日に含まれないもの，さらに土日に含まれないもののboolインデックスを取得
@@ -323,6 +330,7 @@ def get_not_workdays_jp(start_date, end_date, return_as="date", end_include=Fals
         最終日も含めて出力するか
     """
     assert isinstance(start_date, datetime.date) and isinstance(end_date, datetime.date)
+    assert not isinstance(start_date, datetime.datetime) and not isinstance(end_date, datetime.datetime)
     # 返り値の形式の指定
     return_as_set = {"dt", "date"}
     if not return_as in return_as_set:
@@ -331,16 +339,19 @@ def get_not_workdays_jp(start_date, end_date, return_as="date", end_include=Fals
     # datetime.dateをpd.Timestampに変換(datetime.dateは通常pd.DatetimeIndexと比較できないため)
     start_timestamp = pd.Timestamp(start_date)
     end_timestamp = pd.Timestamp(end_date)
-    
-    # 期間中のholidayを取得
-    holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<end_timestamp)  # DatetimeIndexを使うことに注意
-    holidays_in_span_datetimeindex = option.holidays_datetimeindex[holidays_in_span_index]  # pd.DatetimeIndexを使う
 
     # 期間中のdatetimeのarrayを取得
     if end_include:
         days_datetimeindex = pd.date_range(start=start_date, end=end_date, freq="D")  # 最終日も含める
     else:
         days_datetimeindex = pd.date_range(start=start_date, end=end_date-datetime.timedelta(days=1), freq="D")  # 最終日は含めない
+        
+    # 期間中のholidayを取得
+    if end_include:
+        holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<=end_timestamp)  # DatetimeIndexを使うことに注意
+    else:
+        holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<end_timestamp)  # DatetimeIndexを使うことに注意
+    holidays_in_span_datetimeindex = option.holidays_datetimeindex[holidays_in_span_index]
     
     # 休日に含まれないもの，さらに休日曜日に含まれないもののboolインデックスを取得
     holiday_bool_array = days_datetimeindex.isin(holidays_in_span_datetimeindex)  # 休日であるかのブール
@@ -365,6 +376,7 @@ def check_workday_jp(select_date):
         入力するdate
     """
     assert isinstance(select_date, datetime.date)
+    assert not isinstance(select_date, datetime.datetime)
     # 休日であるかどうか
     is_holiday = (option.holidays_date_array==select_date).sum() > 0
     
@@ -394,8 +406,7 @@ def iter_and_repeat(iterable):
             yield last_item
 
 
-
-def get_next_workday_jp(select_date, days=1, select_include=False, return_as="date"):
+def get_next_workday_jp(select_date, days=1, return_as="date"):
     """
     指定した日数後の営業日を取得
     select_date: datetime.date
@@ -408,6 +419,7 @@ def get_next_workday_jp(select_date, days=1, select_include=False, return_as="da
         - 'datetime': datetime.datetime array
     """
     assert isinstance(select_date, datetime.date)
+    assert not isinstance(select_date, datetime.datetime)
     # 返り値の形式の指定
     return_as_set = {"dt", "date"}
     if not return_as in return_as_set:
@@ -474,6 +486,7 @@ def get_previous_workday_jp(select_date, days=1, return_as="date"):
         - 'datetime': datetime.datetime array
     """
     assert isinstance(select_date, datetime.date)
+    assert not isinstance(select_date, datetime.datetime)
     # 返り値の形式の指定
     return_as_set = {"dt", "date"}
     if not return_as in return_as_set:
@@ -540,6 +553,7 @@ def get_near_workday_jp(select_date, is_after=True, return_as="date"):
         - 'datetime': datetime.datetime array
     """
     assert isinstance(select_date, datetime.date)
+    assert not isinstance(select_date, datetime.datetime)
     # 返り値の形式の指定
     return_as_set = {"dt", "date"}
     if not return_as in return_as_set:
@@ -571,6 +585,8 @@ def get_workdays_number_jp(start_date, days, return_as="date"):
         - 'dt':pd.Timstamp
         - 'datetime': datetime.datetime array
     """
+    assert isinstance(start_date, datetime.date)
+    assert not isinstance(start_date, datetime.datetime)
     #get_net_workday_jpでは初日はworkdayに含めないので，初日がworkdayならend_includeをFalseにする
     if days > 0:
         is_initial_day_workday = check_workday_jp(start_date)
@@ -588,7 +604,6 @@ def get_workdays_number_jp(start_date, days, return_as="date"):
             end_date = get_previous_workday_jp(start_date, days=abs(days), return_as="date")
         return get_workdays_jp(end_date, start_date, return_as=return_as, end_include=True)[::-1]
         
-
 
 if __name__ == "__main__":
     import pickle
@@ -653,25 +668,3 @@ if __name__ == "__main__":
         naive_stock_df = pickle.load(f)
 
     print("naive_stock_df at 9:00",naive_stock_df.at_time(datetime.time(9,0)))
-
-    ##########################
-    ### extract_workdays_jp
-    ##########################
-    
-    extracted_stock_df = extract_workdays_jp(aware_stock_df, return_as="df")
-    print("workdays stock_df at 9:00",extracted_stock_df.at_time(datetime.time(9,0)))
-
-    ##########################
-    ### extract_intraday_jp
-    ##########################
-
-    extracted_df = extract_intraday_jp(naive_stock_df, return_as="df")
-    print("intraday stock_df at 8:00",extracted_df.at_time(datetime.time(8,0)))
-
-    ##########################
-    ### extract_workdays_intraday_jp
-    ##########################
-    
-    extracted_df = extract_workdays_intraday_jp(aware_stock_df, return_as="df")
-    print("workday intraday stock_df at 9:00",extracted_df.at_time(datetime.time(9,0)))
-    print("workday intraday stock_df at 8:00",extracted_df.at_time(datetime.time(8,0)))

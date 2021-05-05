@@ -1,7 +1,9 @@
 import datetime
+from datetime import timedelta
 from pytz import timezone
+from itertools import zip_longest
 
-from .py_workdays_ver4 import option, check_workday_jp, get_near_workday_jp, get_next_workday_jp, get_previous_workday_jp
+from .py_workdays_ver4 import option, check_workday_jp, get_near_workday_jp, get_next_workday_jp, get_previous_workday_jp, get_workdays_jp
 
 
 def get_timezone_datetime_like(select_datetime, like_datetime):
@@ -165,6 +167,150 @@ def get_near_workday_intraday_jp(select_datetime, is_after=True):
                                             )
             out_datetime = get_timezone_datetime_like(out_datetime, select_datetime)
             return out_datetime, "border_end"
+
+
+def get_borders_workday_intraday(start_datetime, end_datetime):
+    """
+    指定期間中の営業日・営業時間のボーダーをシンボルと共に返す
+    Parameters
+    ----------
+    start_datetime: datetime.datetime
+        期間の開始日時
+    end_datetime: datetime.datetime
+        期間の終了日時
+    
+    Returns
+    -------
+    border_list: list of tuple
+        out_datetime: datetime.datetime
+            営業日・営業時間（あるいはボーダー）の日時
+        boder_symbol: str
+            out_datetimeがボーダーであるか・そうだとして開始か終了かを示す文字列
+                "border_intra": 営業時間内
+                "border_start": 営業時間の開始時刻
+                "border_end": 営業時間の終了時刻   
+    """
+    out_list = []
+    border_starts = [one_borders[0] for one_borders in option.intraday_borders]
+    border_ends = [one_borders[1] for one_borders in option.intraday_borders]
+    start_date = start_datetime.date()
+    end_date = end_datetime.date()
+    
+    #開始時刻が営業日に入っている場合
+    if check_workday_jp(start_date):
+        start_time = start_datetime.time()
+        bigger_border_starts = [one_border for one_border in border_starts if one_border >= start_time]
+        bigger_border_ends = [one_border for one_border in border_ends if one_border >= start_time]
+        # 開始時刻に最も近い終了境界
+        if check_workday_intraday_jp(start_datetime) and len(bigger_border_ends) > 0:
+            start_border_time = min(bigger_border_ends)
+            bigger_border_ends.remove(start_border_time)  # 開始境界と終了境界のセットを残すため
+            start_border_datetime = datetime.datetime(start_datetime.year,
+                                                      start_datetime.month,
+                                                      start_datetime.day,
+                                                      start_border_time.hour,
+                                                      start_border_time.minute,
+                                                      start_border_time.second
+                                                     )
+            start_border_datetime = get_timezone_datetime_like(start_border_datetime, start_datetime)
+            out_list.append((start_border_datetime, "border_end"))
+        
+        # それ以外のその日の境界
+        for one_start_border_time, one_end_border_time in zip_longest(bigger_border_starts, bigger_border_ends):
+            if one_start_border_time is not None:
+                one_start_border_datetime =  datetime.datetime(start_date.year,
+                                                               start_date.month,
+                                                               start_date.day,
+                                                               one_start_border_time.hour,
+                                                               one_start_border_time.minute,
+                                                               one_start_border_time.second
+                                                              )
+                one_start_border_datetime = get_timezone_datetime_like(one_start_border_datetime, start_datetime)
+                out_list.append((one_start_border_datetime, "border_start"))
+            
+            if one_end_border_time is not None:
+                one_end_border_datetime =  datetime.datetime(start_date.year,
+                                                             start_date.month,
+                                                             start_date.day,
+                                                             one_end_border_time.hour,
+                                                             one_end_border_time.minute,
+                                                             one_end_border_time.second
+                                                            )
+                one_end_border_datetime = get_timezone_datetime_like(one_end_border_datetime, start_datetime)
+                out_list.append((one_end_border_datetime, "border_end"))       
+    
+    #開始時刻から終了時刻までの営業日
+    workdays = get_workdays_jp(start_date+timedelta(days=1), end_date-timedelta(days=1), end_include=True)
+    
+    for workday in workdays:
+        for one_start_border_time, one_end_border_time in zip(border_starts, border_ends):
+            one_start_border_datetime =  datetime.datetime(workday.year,
+                                                           workday.month,
+                                                           workday.day,
+                                                           one_start_border_time.hour,
+                                                           one_start_border_time.minute,
+                                                           one_start_border_time.second
+                                                          )
+            one_start_border_datetime = get_timezone_datetime_like(one_start_border_datetime, start_datetime)
+            out_list.append((one_start_border_datetime, "border_start"))
+            
+            
+            one_end_border_datetime =  datetime.datetime(workday.year,
+                                                         workday.month,
+                                                         workday.day,
+                                                         one_end_border_time.hour,
+                                                         one_end_border_time.minute,
+                                                         one_end_border_time.second
+                                                        )
+            one_end_border_datetime = get_timezone_datetime_like(one_end_border_datetime, start_datetime)
+            out_list.append((one_end_border_datetime, "border_end"))
+    
+    # 終了時刻が営業日・営業時間に入っている場合
+    if check_workday_jp(end_date):
+        end_time = end_datetime.time()
+        smaller_border_ends = [one_border for one_border in border_ends if one_border < end_time]  # 終了時刻を含めない
+        smaller_border_starts = [one_border for one_border in border_starts if one_border < end_time]  # 終了時刻を含めない
+        if check_workday_intraday_jp(end_datetime) and len(smaller_border_starts) > 0:
+            end_border_time = max(smaller_border_starts)
+            smaller_border_starts.remove(end_border_time)
+            end_border_datetime = datetime.datetime(end_datetime.year,
+                                                    end_datetime.month,
+                                                    end_datetime.day,
+                                                    end_border_time.hour,
+                                                    end_border_time.minute,
+                                                    end_border_time.second
+                                                    )
+            end_border_datetime = get_timezone_datetime_like(end_border_datetime, end_datetime)
+            out_list.append((end_border_datetime, "border_start"))
+            
+        # それ以外のその日の境界
+        for one_start_border_time, one_end_border_time in zip_longest(smaller_border_starts, smaller_border_ends):
+            if one_start_border_time is not None:
+                one_start_border_datetime =  datetime.datetime(end_date.year,
+                                                               end_date.month,
+                                                               end_date.day,
+                                                               one_start_border_time.hour,
+                                                               one_start_border_time.minute,
+                                                               one_start_border_time.second
+                                                              )
+                one_start_border_datetime = get_timezone_datetime_like(one_start_border_datetime, start_datetime)
+                out_list.append((one_start_border_datetime, "border_start"))
+            
+            if one_end_border_time is not None:
+                one_end_border_datetime =  datetime.datetime(end_date.year,
+                                                             end_date.month,
+                                                             end_date.day,
+                                                             one_end_border_time.hour,
+                                                             one_end_border_time.minute,
+                                                             one_end_border_time.second
+                                                            )
+                one_end_border_datetime = get_timezone_datetime_like(one_end_border_datetime, start_datetime)
+                out_list.append((one_end_border_datetime, "border_end"))
+                
+        # 最後にソート
+        out_list.sort(key=lambda one_tuple: one_tuple[0])  # timeの方でソート
+        
+    return out_list
 
 if __name__ == "__main__":
     pass
