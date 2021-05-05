@@ -7,7 +7,7 @@ from pathlib import Path
 from py_workdays import get_holidays_jp, get_workdays_jp, get_not_workdays_jp
 from py_workdays import check_workday_jp, get_next_workday_jp, get_previous_workday_jp, get_workdays_number_jp, get_near_workday_jp
 from py_workdays import extract_workdays_jp, extract_intraday_jp, extract_workdays_intraday_jp
-from py_workdays import check_workday_intraday_jp, get_near_workday_intraday_jp, get_borders_workday_intraday
+from py_workdays import check_workday_intraday_jp, get_near_workday_intraday_jp, get_borders_workday_intraday, get_next_border_workday_intraday_jp, get_previous_border_workday_intraday_jp
 from py_workdays import option
 
 
@@ -139,6 +139,24 @@ class TestWorkdays(unittest.TestCase):
         self.assertFalse(check_workday_intraday_jp(datetime.datetime(2021,1,1,10,0,0)))
         self.assertFalse(check_workday_intraday_jp(datetime.datetime(2021,1,4,0,0,0)))
         
+        # get_next_border_workday_intraday_jp
+        next_border_workday_intraday_tuple = get_next_border_workday_intraday_jp(datetime.datetime(2021,1,1,10,0,0))
+        self.assertEqual(next_border_workday_intraday_tuple, (datetime.datetime(2021, 1, 4, 9, 0), 'border_start'))
+        next_border_workday_intraday_tuple = get_next_border_workday_intraday_jp(datetime.datetime(2021,1,4,9,0,0))
+        self.assertEqual(next_border_workday_intraday_tuple, (datetime.datetime(2021, 1, 4, 11, 30), 'border_end'))
+        next_border_workday_intraday_tuple = get_next_border_workday_intraday_jp(datetime.datetime(2021,1,4,11,30,0))
+        self.assertEqual(next_border_workday_intraday_tuple, (datetime.datetime(2021, 1, 4, 12, 30), 'border_start'))
+        
+        # get_previous_border_workday_intraday_jp
+        previous_border_workday_intraday_tuple = get_previous_border_workday_intraday_jp(datetime.datetime(2021,1,1,10,0,0))
+        self.assertEqual(previous_border_workday_intraday_tuple, (datetime.datetime(2020, 12, 31, 15, 0), 'border_end'))
+        previous_border_workday_intraday_tuple = get_previous_border_workday_intraday_jp(datetime.datetime(2021,12,31,12,30,0))
+        self.assertEqual(previous_border_workday_intraday_tuple, (datetime.datetime(2021, 12, 31, 11, 30), 'border_end'))       
+        previous_border_workday_intraday_tuple = get_previous_border_workday_intraday_jp(datetime.datetime(2021,12,31,15,0,0))
+        self.assertEqual(previous_border_workday_intraday_tuple, (datetime.datetime(2021, 12, 31, 15, 0), 'border_end'))
+        previous_border_workday_intraday_tuple = get_previous_border_workday_intraday_jp(datetime.datetime(2021,12,31,15,0,0), force_is_end=True)
+        self.assertEqual(previous_border_workday_intraday_tuple, (datetime.datetime(2021, 12, 31, 12, 30), 'border_start'))
+        
         # get_near_workday_ntraday_jp
         near_workday_intraday_tuple = get_near_workday_intraday_jp(datetime.datetime(2021,1,1,10,0,0), is_after=True)
         self.assertEqual((datetime.datetime(2021,1,4,9,0,0), "border_start"), near_workday_intraday_tuple)
@@ -170,6 +188,7 @@ class TestWorkdays(unittest.TestCase):
                            (datetime.datetime(2020, 12, 31, 12, 30), 'border_start')]
         
         self.assertEqual(border_list, true_border_list)
+        
 
 
 class TestOption(unittest.TestCase):
