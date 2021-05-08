@@ -418,6 +418,7 @@ def get_next_workday_jp(select_date, days=1, return_as="date"):
         - 'dt':pd.Timstamp
         - 'datetime': datetime.datetime array
     """
+    #from IPython.core.debugger import Pdb; Pdb().set_trace()
     assert isinstance(select_date, datetime.date)
     assert not isinstance(select_date, datetime.datetime)
     # 返り値の形式の指定
@@ -434,7 +435,10 @@ def get_next_workday_jp(select_date, days=1, return_as="date"):
         holiday_bigger_select_index = (option.holidays_date_array<select_date).sum()
     else:  # select_dayが休日でない場合
         holiday_bigger_select_index = (option.holidays_date_array<=select_date).sum()
-
+        
+    if holiday_bigger_select_index>=len(option.holidays_date_array):  # select_date以降の休日が存在しない場合
+        holiday_bigger_select_index = -1
+        
     holiday_iter = iter_and_repeat(iter(option.holidays_date_array[holiday_bigger_select_index:]))
     def days_gen(select_date):
         add_days = 0  # select_dateを含める
@@ -446,7 +450,8 @@ def get_next_workday_jp(select_date, days=1, return_as="date"):
     # 以下二つのイテレーターを比較し，one_dayが休日に含まれる場合カウントし，カウントが指定に達した場合終了する
     one_day = next(days_iter)
     one_holiday = next(holiday_iter)
-    assert(one_day <= one_holiday)  # これを満たさないと祝日検出ができない
+    if holiday_bigger_select_index!=-1:  # select_date以降の休日が存在しない場合
+        assert(one_day <= one_holiday)  # これを満たさないと祝日検出ができない
 
     # 最初はwhileの外で，さらに初日がworkdaysでもカウントしない
     if one_day==one_holiday:
@@ -472,7 +477,6 @@ def get_next_workday_jp(select_date, days=1, return_as="date"):
     elif return_as=="dt":
         return pd.Timestamp(one_day)
 
-
 def get_previous_workday_jp(select_date, days=1, return_as="date"):
     """
     指定した日数前の営業日を取得
@@ -485,6 +489,7 @@ def get_previous_workday_jp(select_date, days=1, return_as="date"):
         - 'dt':pd.Timstamp
         - 'datetime': datetime.datetime array
     """
+    #from IPython.core.debugger import Pdb; Pdb().set_trace()
     assert isinstance(select_date, datetime.date)
     assert not isinstance(select_date, datetime.datetime)
     # 返り値の形式の指定
@@ -501,6 +506,9 @@ def get_previous_workday_jp(select_date, days=1, return_as="date"):
         holiday_bigger_select_index = (option.holidays_date_array[::-1]>select_date).sum()
     else:  # select_dayが休日でない場合
         holiday_bigger_select_index = (option.holidays_date_array[::-1]>=select_date).sum()
+        
+    if holiday_bigger_select_index>=len(option.holidays_date_array):  # select_date以前の休日が存在しない場合
+        holiday_bigger_select_index = -1
 
     holiday_iter = iter_and_repeat(iter(option.holidays_date_array[::-1][holiday_bigger_select_index:]))
     def days_gen(select_date):
@@ -513,7 +521,8 @@ def get_previous_workday_jp(select_date, days=1, return_as="date"):
     # 以下二つのイテレーターを比較し，one_dayが休日に含まれる場合カウントし，カウントが指定に達した場合終了する
     one_day = next(days_iter)
     one_holiday = next(holiday_iter)
-    assert(one_day >= one_holiday)  # これを満たさないと祝日検出ができない
+    if holiday_bigger_select_index!=-1:  # select_date以前の休日が存在しない場合
+        assert(one_day >= one_holiday)  # これを満たさないと祝日検出ができない
 
     # 最初はwhileの外で，さらに初日がworkdaysでもカウントしない
     if one_day==one_holiday:

@@ -402,5 +402,225 @@ def get_borders_workday_intraday(start_datetime, end_datetime):
         
     return out_list
 
+
+def time_to_delta(_time):
+    """
+    datetime.timeをdatetime.deltatimeに変更する
+    """
+    return timedelta(hours=_time.hour, minutes=_time.minute, seconds=_time.second)
+
+
+def add_workday_intraday_datetime(select_datetime, delta_time):
+    """
+    営業日・営業時間を考慮しdatetime.datetimeを追加する
+    select_datetime: datetime.datetime
+        指定する日時
+    delta_time: datetime.timedelta
+        追加するtimedelta
+    """
+    assert delta_time >= timedelta(seconds=0)
+    all_delta_time = delta_time
+    one_workday_delta_time = timedelta(seconds=0)
+    for one_borders in option.intraday_borders:
+        one_workday_delta_time += time_to_delta(one_borders[1]) - time_to_delta(one_borders[0])  # ボーダーの重なりは考慮しないことに注意
+    
+    select_date = select_datetime.date()
+    borders_starts = [one_borders[0] for one_borders in option.intraday_borders]
+    next_border_datetime, next_border_symbol = get_next_border_workday_intraday_jp(select_datetime)
+    
+    if check_workday_intraday_jp(select_datetime) and next_border_symbol=="border_end":  # select_datetimeが営業時間内にある場合
+        delta_select_date_intraday = (next_border_datetime - select_datetime)
+        
+        if all_delta_time < delta_select_date_intraday: # 残りがその営業時間内以下の場合
+            out_datetime = select_datetime + all_delta_time
+            return out_datetime
+        elif all_delta_time==delta_select_date_intraday:  # 残りがその営業時間と同じ場合
+            out_datetime, out_datetime_symbol = get_next_border_workday_intraday_jp(select_datetime + all_delta_time)
+            assert out_datetime_symbol=="border_start"
+            return out_datetime
+        else:
+            all_delta_time -= delta_select_date_intraday  # 営業時間分を減らす
+    
+    if next_border_datetime.date()==select_date:  # その日の営業時間がまだ残っている場合
+        next_border_time = next_border_datetime.time()
+        bigger_intraday_index = [i for i,one_border_start in enumerate(borders_starts) if next_border_time <=one_border_start]
+        
+        for index in bigger_intraday_index:
+            delta_select_date_intraday = time_to_delta(option.intraday_borders[index][1]) - time_to_delta(option.intraday_borders[index][0])
+            if all_delta_time <= delta_select_date_intraday:  # 残りがその営業時間内以下の場合
+                out_datetime_start = datetime.datetime(year=select_date.year,
+                                                       month=select_date.month,
+                                                       day=select_date.day,
+                                                       hour=option.intraday_borders[index][0].hour,
+                                                       minute=option.intraday_borders[index][0].minute,
+                                                       second=option.intraday_borders[index][0].second
+                                                      )
+                out_datetime_start = get_timezone_datetime_like(out_datetime_start, select_datetime)
+                out_datetime = out_datetime_start + all_delta_time
+                
+                if all_delta_time==delta_select_date_intraday:  # 残りがその営業時間と同じ場合
+                    out_datetime, out_datetime_symbol = get_next_border_workday_intraday_jp(out_datetime)
+                    assert out_datetime_symbol=="border_start"
+                
+                return out_datetime
+            else:
+                all_delta_time -= delta_select_date_intraday  # 営業時間分を減らす
+
+    add_day_number = 1  #追加が必要な営業日の日数
+    
+    while True: # 進める営業日を求め残りの時間を計算する
+        if all_delta_time <= one_workday_delta_time:
+            break
+        all_delta_time -= one_workday_delta_time
+        add_day_number += 1
+
+    out_date = get_next_workday_jp(select_date, add_day_number)  # 出力する営業日
+    
+    for one_borders in option.intraday_borders:
+        delta_out_date_intraday = time_to_delta(one_borders[1]) - time_to_delta(one_borders[0])
+        if all_delta_time <= delta_out_date_intraday:  # 残りがその営業時間内以下の場合
+            out_datetime_start = datetime.datetime(year=out_date.year,
+                                                   month=out_date.month,
+                                                   day=out_date.day,
+                                                   hour=one_borders[0].hour,
+                                                   minute=one_borders[0].minute,
+                                                   second=one_borders[0].second
+                                                  ) 
+            out_datetime_start = get_timezone_datetime_like(out_datetime_start, select_datetime)
+            out_datetime = out_datetime_start + all_delta_time
+            
+            if all_delta_time==delta_out_date_intraday:  # 残りがその営業時間と同じ場合
+                out_datetime, out_datetime_symbol = get_next_border_workday_intraday_jp(out_datetime)
+                assert out_datetime_symbol=="border_start"
+            
+            return out_datetime
+        else:
+            all_delta_time -= delta_out_date_intraday  # 営業時間分を減らす      
+
+
+def sub_workday_intraday_datetime(select_datetime, delta_time):
+    """
+    営業日・営業時間を考慮しdatetime.datetimeを減らす
+    select_datetime: datetime.datetime
+        指定する日時
+    delta_time: datetime.timedelta
+        減算するtimedelta
+    """
+    #from IPython.core.debugger import Pdb; Pdb().set_trace()
+    assert delta_time >= timedelta(seconds=0)
+    all_delta_time = delta_time
+    one_workday_delta_time = timedelta(seconds=0)
+    for one_borders in option.intraday_borders:
+        one_workday_delta_time += time_to_delta(one_borders[1]) - time_to_delta(one_borders[0])  # ボーダーの重なりは考慮しないことに注意
+    
+    select_date = select_datetime.date()
+    borders_ends = [one_borders[1] for one_borders in option.intraday_borders]
+    previous_border_datetime, previous_border_symbol = get_previous_border_workday_intraday_jp(select_datetime)
+    if check_workday_intraday_jp(select_datetime) and previous_border_symbol=="border_start":  # select_datetimeが営業時間内にある場合
+        delta_select_date_intraday = (select_datetime - previous_border_datetime)
+        if all_delta_time <= delta_select_date_intraday: # 残りがその営業時間内以下の場合
+            out_datetime = select_datetime - all_delta_time
+            return out_datetime
+        else:
+            all_delta_time -= delta_select_date_intraday  # 営業時間分を減らす
+    
+    if previous_border_datetime.date()==select_date:  # その日の営業時間がまだ残っている場合
+        previous_border_time = previous_border_datetime.time()
+        smaller_intraday_index = [i for i,one_border_end in enumerate(borders_ends) if previous_border_time>=one_border_end]
+        for index in smaller_intraday_index[::-1]:  # 逆順
+            delta_select_date_intraday = time_to_delta(option.intraday_borders[index][1]) - time_to_delta(option.intraday_borders[index][0])
+            if all_delta_time <= delta_select_date_intraday:  # 残りがその営業時間内以下の場合
+                out_datetime_end = datetime.datetime(year=select_date.year,
+                                                     month=select_date.month,
+                                                     day=select_date.day,
+                                                     hour=option.intraday_borders[index][1].hour,
+                                                     minute=option.intraday_borders[index][1].minute,
+                                                     second=option.intraday_borders[index][1].second
+                                                    )
+                out_datetime_end = get_timezone_datetime_like(out_datetime_end, select_datetime)
+                out_datetime = out_datetime_end - all_delta_time
+                return out_datetime
+            else:
+                all_delta_time -= delta_select_date_intraday  # 営業時間分を減らす
+
+    sub_day_number = 1  #追加が必要な営業日の日数
+    
+    while True: # 進める営業日を求め残りの時間を計算する
+        if all_delta_time <= one_workday_delta_time:
+            break
+        all_delta_time -= one_workday_delta_time
+        sub_day_number += 1
+
+    out_date = get_previous_workday_jp(select_date, sub_day_number)  # 出力する営業日
+    
+    for one_borders in option.intraday_borders[::-1]:  # 逆順
+        delta_out_date_intraday = time_to_delta(one_borders[1]) - time_to_delta(one_borders[0])
+        if all_delta_time <= delta_out_date_intraday:  # 残りがその営業時間内以下の場合
+            out_datetime_end = datetime.datetime(year=out_date.year,
+                                                 month=out_date.month,
+                                                 day=out_date.day,
+                                                 hour=one_borders[1].hour,
+                                                 minute=one_borders[1].minute,
+                                                 second=one_borders[1].second
+                                                ) 
+            out_datetime_end = get_timezone_datetime_like(out_datetime_end, select_datetime)
+            out_datetime = out_datetime_end - all_delta_time
+            return out_datetime
+        else:
+            all_delta_time -= delta_out_date_intraday  # 営業時間分を減らす     
+
+
+def get_timedelta_workdays_intraday(start_datetime, end_datetime):
+    """
+    指定期間中の営業日・営業時間をtimedeltaとして出力
+    start_datetime: datetime.datetime
+        指定期間の開始日時
+    end_datetime: datetime.datetime
+        指定期間の終了日時
+    """
+    all_delta_time = timedelta(seconds=0)
+    start_date = start_datetime.date()
+    start_time = start_datetime.time()
+    end_date = end_datetime.date()
+    end_time = end_datetime.time()
+    #from IPython.core.debugger import Pdb; Pdb().set_trace()
+    
+    border_starts = [one_borders[0] for one_borders in option.intraday_borders]
+    border_ends = [one_borders[1] for one_borders in option.intraday_borders]
+    
+    one_workday_delta_time = timedelta(seconds=0)
+    #start_datetimeについて
+    for one_borders in option.intraday_borders:
+        one_workday_delta_time += time_to_delta(one_borders[1]) - time_to_delta(one_borders[0])  # ボーダーの重なりは考慮しないことに注意
+    
+    if check_workday_jp(start_date):  # start_dateが営業日の場合
+        if check_workday_intraday_jp(start_datetime):  # start_datetimeが営業時間内の場合
+            bigger_border_ends = [one_border_end for one_border_end in border_ends if one_border_end > start_time]
+            near_border_end = min(bigger_border_ends)
+            all_delta_time += time_to_delta(near_border_end) - time_to_delta(start_time)
+        
+        bigger_intraday_index = [i for i,one_border_start in enumerate(border_starts) if start_time < one_border_start]
+        for index in bigger_intraday_index:
+            all_delta_time += time_to_delta(option.intraday_borders[index][1]) - time_to_delta(option.intraday_borders[index][0])
+            
+    
+    #開始時刻から終了時刻までの営業日
+    workdays = get_workdays_jp(start_date+timedelta(days=1), end_date-timedelta(days=1), end_include=True)
+    for _ in range(len(workdays)):
+        all_delta_time += one_workday_delta_time
+        
+    #end_datetimeについて
+    if check_workday_jp(end_date):  # end_dateが営業日の場合
+        if check_workday_intraday_jp(end_datetime):
+            smaller_border_starts = [one_border_start for one_border_start in border_starts if one_border_start <= end_time]
+            near_border_start = max(smaller_border_starts)
+            all_delta_time += time_to_delta(end_time) - time_to_delta(near_border_start)
+        
+        smaller_intraday_index = [i for i,one_border_end in enumerate(border_ends) if one_border_end <= end_time]
+        for index in smaller_intraday_index:
+            all_delta_time += time_to_delta(option.intraday_borders[index][1]) - time_to_delta(option.intraday_borders[index][0])
+        
+    return all_delta_time
+
 if __name__ == "__main__":
     pass

@@ -1,5 +1,0 @@
-jpholiday
-pytz
-numpy
-pandas
-requests

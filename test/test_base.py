@@ -1,13 +1,16 @@
 import unittest
 import numpy as np
 import datetime
+from datetime import timedelta
 import pandas as pd
 from pathlib import Path
+from pytz import timezone
 
 from py_workdays import get_holidays_jp, get_workdays_jp, get_not_workdays_jp
 from py_workdays import check_workday_jp, get_next_workday_jp, get_previous_workday_jp, get_workdays_number_jp, get_near_workday_jp
-from py_workdays import extract_workdays_jp, extract_intraday_jp, extract_workdays_intraday_jp
+from py_workdays import extract_workdays_jp, extract_intraday_jp, extract_workdays_intraday_jp, extract_workdays_intraday_jp_index
 from py_workdays import check_workday_intraday_jp, get_near_workday_intraday_jp, get_borders_workday_intraday, get_next_border_workday_intraday_jp, get_previous_border_workday_intraday_jp
+from py_workdays import add_workday_intraday_datetime, sub_workday_intraday_datetime, get_timedelta_workdays_intraday
 from py_workdays import option
 
 
@@ -128,12 +131,13 @@ class TestWorkdays(unittest.TestCase):
         self.assertEqual(len(extracted_df.at_time(datetime.time(8,0)).index),0)
         
         # 両方チェック
+        jst = timezone("Asia/Tokyo")
+        nan_df.index = nan_df.index.tz_localize(jst)
         extracted_df = extract_workdays_intraday_jp(nan_df)
         self.assertFalse(np.any(np.in1d(extracted_df.index.date, true_not_workdays)))
         self.assertEqual(len(extracted_df.at_time(datetime.time(8,0)).index),0)
-        
     
-    def test_related_datetime(self):
+    def test_related_datetime_raw(self):        
         # check_workday_intraday
         self.assertTrue(check_workday_intraday_jp(datetime.datetime(2021,1,4,10,0,0)))
         self.assertFalse(check_workday_intraday_jp(datetime.datetime(2021,1,1,10,0,0)))
@@ -189,6 +193,161 @@ class TestWorkdays(unittest.TestCase):
         
         self.assertEqual(border_list, true_border_list)
         
+        # add_workday_intraday_datetime
+        datetime_range = pd.date_range(start=datetime.datetime(2021,1,1,0,0,0), end=datetime.datetime(2021,2,1,0,0,0), closed="left", freq="5T")
+        extracted_datetime_range = extract_workdays_intraday_jp_index(datetime_range)
+        extracted_datetime_range_array = extracted_datetime_range.to_pydatetime()
+        
+        datetime_list = [datetime.datetime(2021, 1, 4, 9, 0)]
+        for i in range(1,len(extracted_datetime_range)):
+            datetime_list.append(add_workday_intraday_datetime(datetime.datetime(2021, 1, 1, 0, 0), timedelta(minutes=5)*i))
+        addded_dateteime_array = np.array(datetime_list)
+        self.assertTrue(np.array_equal(extracted_datetime_range_array, addded_dateteime_array))
+        
+        # sub_workday_intraday_datetime
+        datetime_list = []
+        for i in range(1,len(extracted_datetime_range)+1):
+            datetime_list.append(sub_workday_intraday_datetime(datetime.datetime(2021, 2, 1, 0, 0), timedelta(minutes=5)*i))
+        subed_dateteime_array = np.array(datetime_list[::-1])
+        self.assertTrue(np.array_equal(extracted_datetime_range_array, subed_dateteime_array))
+        
+        # get_timedelta_workdays_intraday
+        start_datetime = datetime.datetime(2021,1,4,9,0,0)
+        end_datetime = datetime.datetime(2021,12,31,9,0,0)
+        delta_time = get_timedelta_workdays_intraday(start_datetime, end_datetime)
+        self.assertEqual(datetime.datetime(2021,12,31,9,0,0), add_workday_intraday_datetime(start_datetime, delta_time))
+        
+        start_datetime = datetime.datetime(2021,1,4,14,0,0)
+        end_datetime = datetime.datetime(2021,12,31,10,0,0)
+        delta_time = get_timedelta_workdays_intraday(start_datetime, end_datetime)
+        self.assertEqual(datetime.datetime(2021,12,31,10,0,0), add_workday_intraday_datetime(start_datetime, delta_time))
+        
+        start_datetime = datetime.datetime(2021,1,4,15,0,0)
+        end_datetime = datetime.datetime(2021,12,31,15,0,0)
+        delta_time = get_timedelta_workdays_intraday(start_datetime, end_datetime)
+        self.assertEqual(datetime.datetime(2022, 1, 3, 9, 0), add_workday_intraday_datetime(start_datetime, delta_time))
+        
+        start_datetime = datetime.datetime(2021,1,4,14,0,0)
+        end_datetime = datetime.datetime(2021,12,31,15,0,0)
+        delta_time = get_timedelta_workdays_intraday(start_datetime, end_datetime)
+        self.assertEqual(datetime.datetime(2021,1,4,14,0,0), sub_workday_intraday_datetime(end_datetime, delta_time))
+        
+        start_datetime = datetime.datetime(2021,1,4,10,0,0)
+        end_datetime = datetime.datetime(2021,12,31,14,0,0)
+        delta_time = get_timedelta_workdays_intraday(start_datetime, end_datetime)
+        self.assertEqual(datetime.datetime(2021,1,4,10,0,0), sub_workday_intraday_datetime(end_datetime, delta_time))
+        
+        start_datetime = datetime.datetime(2021,1,4,9,0,0)
+        end_datetime = datetime.datetime(2021,12,31,9,0,0)
+        delta_time = get_timedelta_workdays_intraday(start_datetime, end_datetime)
+        self.assertEqual(datetime.datetime(2021,1,4,9,0,0), sub_workday_intraday_datetime(end_datetime, delta_time))
+        
+    def test_related_datetime_jst(self):
+        jst = timezone("Asia/Tokyo")
+        
+        # check_workday_intraday
+        self.assertTrue(check_workday_intraday_jp(jst.localize(datetime.datetime(2021,1,4,10,0,0))))
+        self.assertFalse(check_workday_intraday_jp(jst.localize(datetime.datetime(2021,1,1,10,0,0))))
+        self.assertFalse(check_workday_intraday_jp(jst.localize(datetime.datetime(2021,1,4,0,0,0))))
+        
+        # get_next_border_workday_intraday_jp
+        next_border_workday_intraday_tuple = get_next_border_workday_intraday_jp(jst.localize(datetime.datetime(2021,1,1,10,0,0)))
+        self.assertEqual(next_border_workday_intraday_tuple, (jst.localize(datetime.datetime(2021, 1, 4, 9, 0)), 'border_start'))
+        next_border_workday_intraday_tuple = get_next_border_workday_intraday_jp(jst.localize(datetime.datetime(2021,1,4,9,0,0)))
+        self.assertEqual(next_border_workday_intraday_tuple, (jst.localize(datetime.datetime(2021, 1, 4, 11, 30)), 'border_end'))
+        next_border_workday_intraday_tuple = get_next_border_workday_intraday_jp(jst.localize(datetime.datetime(2021,1,4,11,30,0)))
+        self.assertEqual(next_border_workday_intraday_tuple, (jst.localize(datetime.datetime(2021, 1, 4, 12, 30)), 'border_start'))
+        
+        # get_previous_border_workday_intraday_jp
+        previous_border_workday_intraday_tuple = get_previous_border_workday_intraday_jp(jst.localize(datetime.datetime(2021,1,1,10,0,0)))
+        self.assertEqual(previous_border_workday_intraday_tuple, (jst.localize(datetime.datetime(2020, 12, 31, 15, 0)), 'border_end'))
+        previous_border_workday_intraday_tuple = get_previous_border_workday_intraday_jp(jst.localize(datetime.datetime(2021,12,31,12,30,0)))
+        self.assertEqual(previous_border_workday_intraday_tuple, (jst.localize(datetime.datetime(2021, 12, 31, 11, 30)), 'border_end'))
+        previous_border_workday_intraday_tuple = get_previous_border_workday_intraday_jp(jst.localize(datetime.datetime(2021,12,31,15,0,0)))
+        self.assertEqual(previous_border_workday_intraday_tuple, (jst.localize(datetime.datetime(2021, 12, 31, 15, 0)), 'border_end'))
+        previous_border_workday_intraday_tuple = get_previous_border_workday_intraday_jp(jst.localize(datetime.datetime(2021,12,31,15,0,0)), force_is_end=True)
+        self.assertEqual(previous_border_workday_intraday_tuple, (jst.localize(datetime.datetime(2021, 12, 31, 12, 30)), 'border_start'))
+        
+        # get_near_workday_ntraday_jp
+        near_workday_intraday_tuple = get_near_workday_intraday_jp(jst.localize(datetime.datetime(2021,1,1,10,0,0)), is_after=True)
+        self.assertEqual((jst.localize(datetime.datetime(2021,1,4,9,0,0)), "border_start"), near_workday_intraday_tuple)
+        near_workday_intraday_tuple = get_near_workday_intraday_jp(jst.localize(datetime.datetime(2021,1,1,10,0,0)), is_after=False)
+        self.assertEqual((jst.localize(datetime.datetime(2020,12,31,15,0,0)), "border_end"), near_workday_intraday_tuple)
+        
+        # get_borders_workday_intraday
+        border_list = get_borders_workday_intraday(jst.localize(datetime.datetime(2020,12,31,8,0,0)), jst.localize(datetime.datetime(2021,1,1,16,0,0)))
+        true_border_list = [(jst.localize(datetime.datetime(2020, 12, 31, 9, 0)), 'border_start'),
+                            (jst.localize(datetime.datetime(2020, 12, 31, 11, 30)), 'border_end'),
+                            (jst.localize(datetime.datetime(2020, 12, 31, 12, 30)), 'border_start'),
+                            (jst.localize(datetime.datetime(2020, 12, 31, 15, 0)), 'border_end')]
+        
+        self.assertEqual(border_list, true_border_list)
+        
+        border_list = get_borders_workday_intraday(jst.localize(datetime.datetime(2020,12,31,10,0,0)), jst.localize(datetime.datetime(2021,1,1,16,0,0)))
+        true_border_list = [(jst.localize(datetime.datetime(2020, 12, 31, 11, 30)), 'border_end'),
+                            (jst.localize(datetime.datetime(2020, 12, 31, 12, 30)), 'border_start'),
+                            (jst.localize(datetime.datetime(2020, 12, 31, 15, 0)), 'border_end')]
+        
+        self.assertEqual(border_list, true_border_list)
+        
+        border_list = get_borders_workday_intraday(jst.localize(datetime.datetime(2020,12,30,10,0,0)), jst.localize(datetime.datetime(2020,12,31,14,0,0)))
+        true_border_list =[(jst.localize(datetime.datetime(2020, 12, 30, 11, 30)), 'border_end'),
+                           (jst.localize(datetime.datetime(2020, 12, 30, 12, 30)), 'border_start'),
+                           (jst.localize(datetime.datetime(2020, 12, 30, 15, 0)), 'border_end'),
+                           (jst.localize(datetime.datetime(2020, 12, 31, 9, 0)), 'border_start'),
+                           (jst.localize(datetime.datetime(2020, 12, 31, 11, 30)), 'border_end'),
+                           (jst.localize(datetime.datetime(2020, 12, 31, 12, 30)), 'border_start')]
+        
+        self.assertEqual(border_list, true_border_list)
+        
+        # add_workday_intraday_datetime
+        datetime_range = pd.date_range(start=jst.localize(datetime.datetime(2021,1,1,0,0,0)), end=jst.localize(datetime.datetime(2021,2,1,0,0,0)), closed="left", freq="5T")
+        extracted_datetime_range = extract_workdays_intraday_jp_index(datetime_range)
+        extracted_datetime_range_array = extracted_datetime_range.to_pydatetime()
+        
+        datetime_list = [jst.localize(datetime.datetime(2021, 1, 4, 9, 0))]
+        for i in range(1,len(extracted_datetime_range)):
+            datetime_list.append(add_workday_intraday_datetime(jst.localize(datetime.datetime(2021, 1, 1, 0, 0)), timedelta(minutes=5)*i))
+        addded_dateteime_array = np.array(datetime_list)
+        self.assertTrue(np.array_equal(extracted_datetime_range_array, addded_dateteime_array))
+        
+        # sub_workday_intraday_datetime
+        datetime_list = []
+        for i in range(1,len(extracted_datetime_range)+1):
+            datetime_list.append(sub_workday_intraday_datetime(jst.localize(datetime.datetime(2021, 2, 1, 0, 0)), timedelta(minutes=5)*i))
+        subed_dateteime_array = np.array(datetime_list[::-1])
+        self.assertTrue(np.array_equal(extracted_datetime_range_array, subed_dateteime_array))
+        
+        # get_timedelta_workdays_intraday
+        start_datetime = jst.localize(datetime.datetime(2021,1,4,9,0,0))
+        end_datetime = jst.localize(datetime.datetime(2021,12,31,9,0,0))
+        delta_time = get_timedelta_workdays_intraday(start_datetime, end_datetime)
+        self.assertEqual(jst.localize(datetime.datetime(2021,12,31,9,0,0)), add_workday_intraday_datetime(start_datetime, delta_time))
+        
+        start_datetime = jst.localize(datetime.datetime(2021,1,4,14,0,0))
+        end_datetime = jst.localize(datetime.datetime(2021,12,31,10,0,0))
+        delta_time = get_timedelta_workdays_intraday(start_datetime, end_datetime)
+        self.assertEqual(jst.localize(datetime.datetime(2021,12,31,10,0,0)), add_workday_intraday_datetime(start_datetime, delta_time))
+        
+        start_datetime = jst.localize(datetime.datetime(2021,1,4,15,0,0))
+        end_datetime = jst.localize(datetime.datetime(2021,12,31,15,0,0))
+        delta_time = get_timedelta_workdays_intraday(start_datetime, end_datetime)
+        self.assertEqual(jst.localize(datetime.datetime(2022, 1, 3, 9, 0)), add_workday_intraday_datetime(start_datetime, delta_time))
+        
+        start_datetime = jst.localize(datetime.datetime(2021,1,4,14,0,0))
+        end_datetime = jst.localize(datetime.datetime(2021,12,31,15,0,0))
+        delta_time = get_timedelta_workdays_intraday(start_datetime, end_datetime)
+        self.assertEqual(jst.localize(datetime.datetime(2021,1,4,14,0,0)), sub_workday_intraday_datetime(end_datetime, delta_time))
+        
+        start_datetime = jst.localize(datetime.datetime(2021,1,4,10,0,0))
+        end_datetime = jst.localize(datetime.datetime(2021,12,31,14,0,0))
+        delta_time = get_timedelta_workdays_intraday(start_datetime, end_datetime)
+        self.assertEqual(jst.localize(datetime.datetime(2021,1,4,10,0,0)), sub_workday_intraday_datetime(end_datetime, delta_time))
+        
+        start_datetime = jst.localize(datetime.datetime(2021,1,4,9,0,0))
+        end_datetime = jst.localize(datetime.datetime(2021,12,31,9,0,0))
+        delta_time = get_timedelta_workdays_intraday(start_datetime, end_datetime)
+        self.assertEqual(jst.localize(datetime.datetime(2021,1,4,9,0,0)), sub_workday_intraday_datetime(end_datetime, delta_time))        
 
 
 class TestOption(unittest.TestCase):
