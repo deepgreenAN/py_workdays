@@ -241,7 +241,7 @@ p.line(x, aware_stock_df["Close_6502"])
 show(p)
 ```
 
-<img src="https://www.dropbox.com/s/kwn4se2e7dwj49p/raw_stock_df.png">
+<img src="https://dl.dropboxusercontent.com/s/kwn4se2e7dwj49p/raw_stock_df.png">
 
 
 ```python
@@ -253,7 +253,7 @@ p.line(x, extracted_stock_df["Close_6502"])
 show(p)
 ```
 
-<img src="https://www.dropbox.com/s/1mt3v00yrnrjbfs/extract_stock_df_ver1.png">
+<img src="https://dl.dropboxusercontent.com/s/1mt3v00yrnrjbfs/extract_stock_df_ver1.png">
 
 
 途中1日分データが抜けているがこれはデータの方のミス
@@ -338,7 +338,7 @@ p.line(x, extracted_stock_df["Close_6502"])
 show(p)
 ```
 
-<img src="https://www.dropbox.com/s/yjwdpd6hdiukh7j/extract_stock_df_ver2.png">
+<img src="https://dl.dropboxusercontent.com/s/yjwdpd6hdiukh7j/extract_stock_df_ver2.png">
 
 
 csv_source_pathは追加するだけで取得できる休日の更新が行進されるので，以下のようにすればよい
