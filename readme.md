@@ -37,17 +37,17 @@ array([datetime.date(2021, 8, 9), datetime.date(2021, 9, 20),
 ## 使い方
 
 ```python
-from py_workdays import get_workdays_jp, check_workday_jp, get_next_workday_jp, get_workdays_number_jp
+from py_workdays import get_workdays, check_workday, get_next_workday, get_workdays_number
 ```
 
 
 ```python
-from py_workdays import check_workday_intraday_jp, get_next_border_workday_intraday_jp, add_workday_intraday_datetime, get_timedelta_workdays_intraday
+from py_workdays import check_workday_intraday, get_next_border_workday_intraday, add_workday_intraday_datetime, get_timedelta_workdays_intraday
 ```
 
 
 ```python
-from py_workdays import extract_workdays_intraday_jp, option
+from py_workdays import extract_workdays_intraday, option
 ```
 
 ## 指定期間の営業日を取得
@@ -57,7 +57,7 @@ from py_workdays import extract_workdays_intraday_jp, option
 start_date = datetime.date(2021,1,1)
 end_date = datetime.date(2021,2,1)
 
-workdays = get_workdays_jp(start_date, end_date, return_as="date")
+workdays = get_workdays(start_date, end_date, return_as="date")
 workdays
 ```
 
@@ -83,7 +83,7 @@ workdays
 ```python
 select_date = datetime.date(2021,1,1)
 
-check_workday_jp(select_date)
+check_workday(select_date)
 ```
 
 
@@ -99,7 +99,7 @@ check_workday_jp(select_date)
 ```python
 select_date = datetime.date(2021,1,1)
 
-next_workday = get_next_workday_jp(select_date, days=6)
+next_workday = get_next_workday(select_date, days=6)
 next_workday
 ```
 
@@ -117,7 +117,7 @@ next_workday
 start_date = datetime.date(2021,1,1)
 days = 19
 
-workdays = get_workdays_number_jp(start_date, days)
+workdays = get_workdays_number(start_date, days)
 workdays
 ```
 
@@ -145,7 +145,7 @@ workdays
 ```python
 select_datetime = datetime.datetime(2021,1,4,10,0,0)
 
-check_workday_intraday_jp(select_datetime)
+check_workday_intraday(select_datetime)
 ```
 
 
@@ -161,7 +161,7 @@ check_workday_intraday_jp(select_datetime)
 ```python
 select_datetime = datetime.datetime(2021,1,1,0,0,0)
 
-next_border_datetime, border_symbol = get_next_border_workday_intraday_jp(select_datetime)
+next_border_datetime, border_symbol = get_next_border_workday_intraday(select_datetime)
 next_border_datetime, border_symbol
 ```
 
@@ -245,7 +245,7 @@ show(p)
 
 
 ```python
-extracted_stock_df = extract_workdays_intraday_jp(aware_stock_df, return_as="df")
+extracted_stock_df = extract_workdays_intraday(aware_stock_df, return_as="df")
 
 x = np.arange(0, len(extracted_stock_df))
 p = bokeh.plotting.figure(plot_width=1000, plot_height=500)
@@ -330,7 +330,7 @@ option.intraday_borders = [[datetime.time(9, 0), datetime.time(13, 0)]]
 
 
 ```python
-extracted_stock_df = extract_workdays_intraday_jp(aware_stock_df, return_as="df")
+extracted_stock_df = extract_workdays_intraday(aware_stock_df, return_as="df")
 
 x = np.arange(0, len(extracted_stock_df))
 p = bokeh.plotting.figure(plot_width=1000, plot_height=500)

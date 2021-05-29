@@ -32,7 +32,7 @@ def check_jst_datetimes_to_naive(*arg_datetimes):
         return arg_datetimes[0]
 
 
-def extract_workdays_jp_index(dt_index, return_as="index"):
+def extract_workdays_index(dt_index, return_as="index"):
     """
     pd.DatetimeIndexから，営業日のデータのものを抽出
     dt_index: pd.DatetimeIndex
@@ -74,7 +74,7 @@ def extract_workdays_jp_index(dt_index, return_as="index"):
         return workdays_df_indice
 
 
-def extract_workdays_jp(df, return_as="df"):
+def extract_workdays(df, return_as="df"):
     """
     データフレームから，営業日のデータのものを抽出．出力データ形式をreturn_asで指定する．
     df: pd.DataFrame(インデックスとしてpd.DatetimeIndex)
@@ -92,19 +92,19 @@ def extract_workdays_jp(df, return_as="df"):
         raise Exception("return_as must be any in {}".format(return_as_set))
     
     if return_as=="bool":
-        workdays_bool_array = extract_workdays_jp_index(df.index, return_as="bool")
+        workdays_bool_array = extract_workdays_index(df.index, return_as="bool")
         return workdays_bool_array
     elif return_as=="index":
-        workdays_bool_array = extract_workdays_jp_index(df.index, return_as="bool")
+        workdays_bool_array = extract_workdays_index(df.index, return_as="bool")
         workdays_df_indice = df.index[workdays_bool_array]
         return workdays_df_indice
     else:
-        workdays_bool_array = extract_workdays_jp_index(df.index, return_as="bool")
+        workdays_bool_array = extract_workdays_index(df.index, return_as="bool")
         out_df = df[workdays_bool_array].copy()
         return out_df
 
 
-def extract_intraday_jp_index(dt_index, return_as="index"):
+def extract_intraday_index(dt_index, return_as="index"):
     """
     pd.DatetimeIndexから，日中のデータのものを抽出．出力データ形式をreturn_asで指定する．
     dt_index: pd.DatetimeIndex
@@ -136,7 +136,7 @@ def extract_intraday_jp_index(dt_index, return_as="index"):
         return intraday_indice
 
 
-def extract_intraday_jp(df, return_as="df"):
+def extract_intraday(df, return_as="df"):
     """
     データフレームから，日中のデータのものを抽出．出力データ形式をreturn_asで指定する．
     df: pd.DataFrame(インデックスとしてpd.DatetimeIndex)
@@ -154,19 +154,19 @@ def extract_intraday_jp(df, return_as="df"):
         raise Exception("return_as must be any in {}".format(return_as_set))    
 
     if return_as=="bool":
-        intraday_bool_array = extract_intraday_jp_index(df.index, return_as="bool")
+        intraday_bool_array = extract_intraday_index(df.index, return_as="bool")
         return intraday_bool_array 
     elif return_as=="index":
-        intraday_bool_array = extract_intraday_jp_index(df.index, return_as="bool")
+        intraday_bool_array = extract_intraday_index(df.index, return_as="bool")
         intraday_indice = df.index[intraday_bool_array]
         return intraday_indice
     else:
-        intraday_bool_array = extract_intraday_jp_index(df.index, return_as="bool")
+        intraday_bool_array = extract_intraday_index(df.index, return_as="bool")
         out_df = df[intraday_bool_array].copy()
         return out_df
 
 
-def extract_workdays_intraday_jp_index(dt_index, return_as="index"):
+def extract_workdays_intraday_index(dt_index, return_as="index"):
     """
     pd.DatetimeIndexから，営業日+日中のデータのものを抽出．出力データ形式をreturn_asで指定する．
     dt_index: pd.DatetimeIndex
@@ -182,8 +182,8 @@ def extract_workdays_intraday_jp_index(dt_index, return_as="index"):
     if not return_as in return_as_set:
         raise Exception("return_as must be any in {}".format(return_as_set))
         
-    workday_bool_array = extract_workdays_jp_index(dt_index, return_as="bool")
-    intraday_bool_array = extract_intraday_jp_index(dt_index, return_as="bool")
+    workday_bool_array = extract_workdays_index(dt_index, return_as="bool")
+    intraday_bool_array = extract_intraday_index(dt_index, return_as="bool")
     
     workday_intraday_bool_array = workday_bool_array & intraday_bool_array
     if return_as=="bool":
@@ -193,7 +193,7 @@ def extract_workdays_intraday_jp_index(dt_index, return_as="index"):
         return workday_intraday_indice
 
 
-def extract_workdays_intraday_jp(df, return_as="df"):
+def extract_workdays_intraday(df, return_as="df"):
     """
     データフレームから，営業日+日中のデータのものを抽出．出力データ形式をreturn_asで指定する．
     df: pd.DataFrame(インデックスとしてpd.DatetimeIndex)
@@ -211,14 +211,14 @@ def extract_workdays_intraday_jp(df, return_as="df"):
         raise Exception("return_as must be any in {}".format(return_as_set))    
        
     if return_as=="bool":
-        workday_intraday_bool_array = extract_workdays_intraday_jp_index(df.index, return_as="bool")
+        workday_intraday_bool_array = extract_workdays_intraday_index(df.index, return_as="bool")
         return workday_intraday_bool_array
     elif return_as=="index":
-        workday_intraday_bool_array = extract_workdays_intraday_jp_index(df.index, return_as="bool")
+        workday_intraday_bool_array = extract_workdays_intraday_index(df.index, return_as="bool")
         workday_intraday_indice = df.index[workday_intraday_bool_array]
         return workday_intraday_indice
     else:
-        workday_intraday_bool_array = extract_workdays_intraday_jp_index(df.index, return_as="bool")
+        workday_intraday_bool_array = extract_workdays_intraday_index(df.index, return_as="bool")
         out_df = df[workday_intraday_bool_array].copy()
         return out_df
 

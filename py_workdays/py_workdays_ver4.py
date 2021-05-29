@@ -218,7 +218,7 @@ def initialize_source():
     option.__init__()  # optionの初期化
 
 
-def get_holidays_jp(start_date, end_date, with_name=False, independent=False):
+def get_holidays(start_date, end_date, with_name=False, independent=False):
         """
         期間を指定して祝日を取得．
 
@@ -258,7 +258,7 @@ def get_holidays_jp(start_date, end_date, with_name=False, independent=False):
             return  holidays_array
 
 
-def get_workdays_jp(start_date, end_date, return_as="date", end_include=False):
+def get_workdays(start_date, end_date, return_as="date", closed="left"):
     """
     営業日を取得
     
@@ -270,8 +270,10 @@ def get_workdays_jp(start_date, end_date, return_as="date", end_include=False):
         返り値の形式
         - 'dt':pd.DatetimeIndex
         - 'date': datetime.date array
-    end_include: bool
-        最終日も含めて出力するか
+    closed: 境界について
+        - 'left':開始境界を含める
+        - 'right':終了境界を含める
+        - None:どちらも含める
     """
     assert isinstance(start_date, datetime.date) and isinstance(end_date, datetime.date)
     assert not isinstance(start_date, datetime.datetime) and not isinstance(end_date, datetime.datetime)
@@ -285,16 +287,11 @@ def get_workdays_jp(start_date, end_date, return_as="date", end_include=False):
     end_timestamp = pd.Timestamp(end_date)
     
     # 期間中のdatetimeのarrayを取得
-    if end_include:
-        days_datetimeindex = pd.date_range(start=start_date, end=end_date, freq="D")  # 最終日も含める
-    else:
-        days_datetimeindex = pd.date_range(start=start_date, end=end_date-datetime.timedelta(days=1), freq="D")  # 最終日は含めない
+    days_datetimeindex = pd.date_range(start=start_date, end=end_date, freq="D", closed=closed)  # 最終日も含める
+
     
     # 期間中のholidayを取得
-    if end_include:
-        holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<=end_timestamp)  # DatetimeIndexを使うことに注意
-    else:
-        holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<end_timestamp)  # DatetimeIndexを使うことに注意
+    holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<=end_timestamp)  # DatetimeIndexを使うことに注意
     holidays_in_span_datetimeindex = option.holidays_datetimeindex[holidays_in_span_index]
     
     
@@ -314,7 +311,7 @@ def get_workdays_jp(start_date, end_date, return_as="date", end_include=False):
         return workdays_datetimeindex.date
 
 
-def get_not_workdays_jp(start_date, end_date, return_as="date", end_include=False):
+def get_not_workdays(start_date, end_date, return_as="date", closed="left"):
     """
     非営業日を取得(土日or祝日)
     
@@ -326,8 +323,10 @@ def get_not_workdays_jp(start_date, end_date, return_as="date", end_include=Fals
         返り値の形式
         - 'dt':pd.DatetimeIndex
         - 'date': datetime.date array
-    end_include: bool
-        最終日も含めて出力するか
+    closed: 境界について
+        - 'left':開始境界を含める
+        - 'right':終了境界を含める
+        - None:どちらも含める
     """
     assert isinstance(start_date, datetime.date) and isinstance(end_date, datetime.date)
     assert not isinstance(start_date, datetime.datetime) and not isinstance(end_date, datetime.datetime)
@@ -341,16 +340,11 @@ def get_not_workdays_jp(start_date, end_date, return_as="date", end_include=Fals
     end_timestamp = pd.Timestamp(end_date)
 
     # 期間中のdatetimeのarrayを取得
-    if end_include:
-        days_datetimeindex = pd.date_range(start=start_date, end=end_date, freq="D")  # 最終日も含める
-    else:
-        days_datetimeindex = pd.date_range(start=start_date, end=end_date-datetime.timedelta(days=1), freq="D")  # 最終日は含めない
-        
+    days_datetimeindex = pd.date_range(start=start_date, end=end_date, freq="D", closed=closed)  # 最終日も含める
+
+    
     # 期間中のholidayを取得
-    if end_include:
-        holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<=end_timestamp)  # DatetimeIndexを使うことに注意
-    else:
-        holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<end_timestamp)  # DatetimeIndexを使うことに注意
+    holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<=end_timestamp)  # DatetimeIndexを使うことに注意
     holidays_in_span_datetimeindex = option.holidays_datetimeindex[holidays_in_span_index]
     
     # 休日に含まれないもの，さらに休日曜日に含まれないもののboolインデックスを取得
@@ -369,7 +363,7 @@ def get_not_workdays_jp(start_date, end_date, return_as="date", end_include=Fals
         return not_workdays_datetimeindex.date
     
 
-def check_workday_jp(select_date):
+def check_workday(select_date):
     """
     与えられたdatetime.dateが営業日であるかどうかを出力する
     select_date: datetime.date
@@ -406,7 +400,7 @@ def iter_and_repeat(iterable):
             yield last_item
 
 
-def get_next_workday_jp(select_date, days=1, return_as="date"):
+def get_next_workday(select_date, days=1, return_as="date"):
     """
     指定した日数後の営業日を取得
     select_date: datetime.date
@@ -477,7 +471,7 @@ def get_next_workday_jp(select_date, days=1, return_as="date"):
     elif return_as=="dt":
         return pd.Timestamp(one_day)
 
-def get_previous_workday_jp(select_date, days=1, return_as="date"):
+def get_previous_workday(select_date, days=1, return_as="date"):
     """
     指定した日数前の営業日を取得
     select_date: datetime.date
@@ -549,7 +543,7 @@ def get_previous_workday_jp(select_date, days=1, return_as="date"):
         return pd.Timestamp(one_day)
 
 
-def get_near_workday_jp(select_date, is_after=True, return_as="date"):
+def get_near_workday(select_date, is_after=True, return_as="date"):
     """
     引数の最近の営業日を取得
     select_date: datetime.date
@@ -569,7 +563,7 @@ def get_near_workday_jp(select_date, is_after=True, return_as="date"):
         raise Exception("return_as must be any in {}".format(return_as_set))
         
     
-    if check_workday_jp(select_date):  # 指定日が営業日である場合
+    if check_workday(select_date):  # 指定日が営業日である場合
         out_date = select_date
         if return_as=="date":
             return out_date
@@ -577,12 +571,12 @@ def get_near_workday_jp(select_date, is_after=True, return_as="date"):
             return pd.Timestamp(out_date)
     else:
         if is_after:
-            return get_next_workday_jp(select_date, days=1, return_as=return_as)
+            return get_next_workday(select_date, days=1, return_as=return_as)
         else:
-            return get_previous_workday_jp(select_date, days=1, return_as=return_as)
+            return get_previous_workday(select_date, days=1, return_as=return_as)
 
 
-def get_workdays_number_jp(start_date, days, return_as="date"):
+def get_workdays_number(start_date, days, return_as="date"):
     """
     指定した日数分の営業日を取得
     start_date: datetime.date
@@ -596,75 +590,75 @@ def get_workdays_number_jp(start_date, days, return_as="date"):
     """
     assert isinstance(start_date, datetime.date)
     assert not isinstance(start_date, datetime.datetime)
-    #get_net_workday_jpでは初日はworkdayに含めないので，初日がworkdayならend_includeをFalseにする
+    #get_next_workdayでは初日はworkdayに含めないので，初日がworkdayならclosedをleftにする
     if days > 0:
-        is_initial_day_workday = check_workday_jp(start_date)
+        is_initial_day_workday = check_workday(start_date)
+        end_date = get_next_workday(start_date, days=days, return_as="date")
         if is_initial_day_workday:  # 初日がworkdayの場合
-            end_date = get_next_workday_jp(start_date, days=days-1, return_as="date")
+            return get_workdays(start_date, end_date, return_as=return_as, closed="left")
         else:
-            end_date = get_next_workday_jp(start_date, days=days, return_as="date")
-        return get_workdays_jp(start_date, end_date, return_as=return_as, end_include=True)
+            return get_workdays(start_date, end_date, return_as=return_as, closed=None)
     else:
-        is_initial_day_workday = check_workday_jp(start_date)
+        is_initial_day_workday = check_workday(start_date)
+        end_date = get_previous_workday(start_date, days=abs(days), return_as="date")
+        is_initial_day_workday = check_workday(start_date)
         if is_initial_day_workday:
-            end_date = get_previous_workday_jp(start_date, days=abs(days-1), return_as="date")
-            
+            return get_workdays(end_date, start_date, return_as=return_as, closed="right")[::-1]
         else:
-            end_date = get_previous_workday_jp(start_date, days=abs(days), return_as="date")
-        return get_workdays_jp(end_date, start_date, return_as=return_as, end_include=True)[::-1]
+            return get_workdays(end_date, start_date, return_as=return_as, closed=None)[::-1]
         
 
 if __name__ == "__main__":
     import pickle
     ##########################
-    ### get_holidays_jp
+    ### get_holidays
     ##########################
     
     start_date = datetime.date(2019, 1, 1)
     end_date = datetime.date(2020, 12, 31)
 
-    holidays = get_holidays_jp(start_date, end_date, with_name=False)
+    holidays = get_holidays(start_date, end_date, with_name=False)
     print(holidays)
 
     
     ##########################
-    ### get_workdays_jp
+    ### get_workdays
     ##########################
 
     start_date = datetime.datetime(2019, 1, 1)
     end_date = datetime.datetime(2019, 12, 31)
 
-    workdays = get_workdays_jp(start_date, end_date, return_as="date", end_include=False)
+    workdays = get_workdays(start_date, end_date, return_as="date", end_include=False)
     print("workdays:",workdays)
 
     
     ##########################
-    ### get_not_workdays_jp
+    ### get_not_workdays
     ##########################
 
     start_datetime = datetime.date(2019, 1, 1)
     end_datetime = datetime.date(2019, 12, 31)
 
-    not_workdays = get_not_workdays_jp(start_date, end_date, return_as="dt")
+    not_workdays = get_not_workdays(start_date, end_date, return_as="dt")
     print("not_workdays:",not_workdays)
 
     
     ##########################
-    ### check_workday_jp
+    ### check_workday
     ##########################
     
     select_date = datetime.date(2019, 1, 4)
-    print(check_workday_jp(select_date))
+    print(check_workday(select_date))
 
 
     ##########################
-    ### get_next_workday_jp
+    ### get_next_workday
     ##########################
 
     jst_timezone = timezone("Asia/Tokyo")
     select_datetime = jst_timezone.localize(datetime.datetime(2020, 1, 1, 0, 0, 0))
 
-    next_workday = get_next_workday_jp(select_datetime, days=6, return_as="dt")
+    next_workday = get_next_workday(select_datetime, days=6, return_as="dt")
     print("next workday",next_workday)
 
     # データの作成
